@@ -37,6 +37,12 @@ static int cmd_q(char *args) {
 }
 
 static int cmd_help(char *args);
+static int cmd_si(char *args);
+static int cmd_info(char *args);
+static int cmd_p(char* args);
+static int cmd_x(char* args);
+static int cmd_w(char* args);
+static int cmd_d(char* args);
 
 static struct {
   char *name;
@@ -46,7 +52,12 @@ static struct {
   { "help", "Display informations about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
+  { "si", "Step to the next instruction", cmd_si},
+  { "info", "Print state of regs using 'r' or watchpoint using 'w'", cmd_info},
+  { "p", "Calculate the result of target experssion", cmd_p},
+  { "x", "Scan the target address of memory and show the value in the address", cmd_x},
+  { "w", "Set watchpoint", cmd_w},
+  { "d", "Delete watchpoint", cmd_d}
   /* TODO: Add more commands */
 
 };
@@ -73,6 +84,98 @@ static int cmd_help(char *args) {
     }
     printf("Unknown command '%s'\n", arg);
   }
+  return 0;
+}
+
+static int cmd_si(char *args) {
+  int steps = strtok(args, " ") == NULL ? 1 : atoi(strtok(args, " "));
+  cpu_exec(steps);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  char* subcmd = strtok(args, " ");
+  if(subcmd == NULL) {
+    printf("Please input subcmd to show information\n");
+  }
+  else {
+    if(strcmp(subcmd, "r") == 0) {
+      for(int i = 0; i < 8; i++) {
+        printf("%s : 0x%x\n", reg_name(i, 4), reg_l(i));
+      }
+    }
+    else if(strcmp(subcmd, "w") == 0) {
+      show_wp();
+    }
+    else {
+      printf("Undefined subcmd\n");
+    }
+  }
+  return 0;
+}
+
+static int cmd_p(char* args) {
+  char* expression = strtok(args, " ");
+  bool success = true;
+  int value = expr(expression, &success);
+  if(success) {
+    printf("ans = 0x%08x\n", value);
+  }
+  else {
+    printf("Illegal Expression!\n");
+  }
+  return 0;
+}
+
+static int cmd_x(char* args) {
+  char* arg1 = strtok(args, " ");
+  if(arg1 == NULL) {
+    printf("Pleas input N for continuous n address\n");
+    return 0;
+  }
+  int n = atoi(arg1);
+  char* arg2 = args + strlen(arg1) + 1;
+  arg2 = strtok(arg2, " ");
+  if(arg2 == NULL) {
+    printf("Pleas input Expr for beginning address\n");
+    return 0;
+  }
+  bool success = true;
+  int begin_address = expr(arg2, &success);
+  if(success) {
+    begin_address = strtoul(arg2, NULL, 16);
+  }
+  else {
+    printf("Illegal Addrerss Expression!\n");
+  }
+  for(int i = 0; i < n; i++) {
+    uint32_t value = paddr_read(begin_address, 4);
+    printf("0x%x : 0x%08x\n", begin_address, value);
+    begin_address += 4;
+  }
+  return 0;
+}
+
+static int cmd_w(char* args) {
+  WP* wp = new_wp();
+  char* arg = strtok(NULL, "\n");
+  strcpy(wp->expr, arg);
+  bool success = true;
+  wp->value = expr(arg, &success);
+  if(success){
+    printf("watchpoint %d : %s\n", wp->NO, wp->expr);
+  }
+  else{
+    printf("Illegal Expression!\n");
+    free_wp(wp->NO);
+  }
+  return 0;
+}
+
+static int cmd_d(char* args) {
+  char* arg = strtok(NULL, "\n");
+  int no = atoi(arg);
+  free_wp(no);
   return 0;
 }
 
