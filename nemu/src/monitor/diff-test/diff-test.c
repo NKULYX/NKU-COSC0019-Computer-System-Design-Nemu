@@ -147,11 +147,45 @@ void difftest_step(uint32_t eip) {
   gdb_si();
   gdb_getregs(&r);
 
-  // TODO: Check the registers state with QEMU.
   // Set `diff` as `true` if they are not the same.
-  TODO();
-
+  if(r.eax != cpu.eax) {
+    diff = true;
+    printf("eax different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.ecx != cpu.ecx) {
+    diff = true;
+    printf("ecx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.ebx != cpu.ebx) {
+    diff = true;
+    printf("ebx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.edx != cpu.edx) {
+    diff = true;
+    printf("edx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.ebp != cpu.ebp) {
+    diff = true;
+    printf("ebx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.esp != cpu.esp) {
+    diff = true;
+    printf("esp different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.esi != cpu.esi) {
+    diff = true;
+    printf("esi different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.edi != cpu.edi) {
+    diff = true;
+    printf("edi different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
+  if(r.eip != cpu.eip) {
+    diff = true;
+    printf("eip different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+  }
   if (diff) {
+    printf("EFLAGS : NEMU = 0x%08x \t QEMU = 0x%08x \n", cpu.eflags.val, r.eflags);
     nemu_state = NEMU_END;
   }
 }
