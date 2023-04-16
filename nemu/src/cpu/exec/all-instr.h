@@ -24,6 +24,7 @@ make_EHelper(cmp);
 // in logic.c
 make_EHelper(xor);
 make_EHelper(and);
+make_EHelper(setcc); 
 
 // in special.c
 make_EHelper(nop);
