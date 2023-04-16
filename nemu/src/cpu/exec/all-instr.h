@@ -10,6 +10,7 @@ make_EHelper(nemu_trap);
 // in control.c
 make_EHelper(call);
 make_EHelper(ret);
+make_EHelper(jcc);
 
 // in data-mov.c
 make_EHelper(push);
