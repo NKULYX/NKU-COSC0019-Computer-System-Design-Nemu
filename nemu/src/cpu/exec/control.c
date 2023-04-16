@@ -25,8 +25,12 @@ make_EHelper(jmp_rm) {
 
 make_EHelper(call) {
   // the target address is calculated at the decode stage
-  TODO();
-
+  // fisrt push eip
+  rtl_push(eip);
+  // set the destation address jump to
+  rtl_addi(&decoding.jmp_eip, eip, id_dest->val);
+  // set jump flag
+  decoding.is_jmp = 1;
   print_asm("call %x", decoding.jmp_eip);
 }
 

@@ -38,7 +38,10 @@ static inline make_DopHelper(SI) {
    *
    op->simm = ???
    */
-  TODO();
+  t0 = instr_fetch(eip, op->width);
+  // Signed Extension!!!
+  rtl_sext(&t0, &t0, op->width);
+  op->simm = t0;
 
   rtl_li(&op->val, op->simm);
 

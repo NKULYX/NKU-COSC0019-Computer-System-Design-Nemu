@@ -6,26 +6,40 @@ make_EHelper(mov) {
 }
 
 make_EHelper(push) {
-  TODO();
-
+  rtl_push(&id_dest->val);
   print_asm_template1(push);
 }
 
 make_EHelper(pop) {
-  TODO();
-
+  rtl_pop(&t0);
+  operand_write(id_dest,&t0);
   print_asm_template1(pop);
 }
 
 make_EHelper(pusha) {
-  TODO();
-
+  // attention! first save esp
+  t0 = cpu.esp;
+  rtl_push(&cpu.eax);
+  rtl_push(&cpu.ecx);
+  rtl_push(&cpu.edx);
+  rtl_push(&cpu.ebx);
+  rtl_push(&t0);
+  rtl_push(&cpu.ebp);
+  rtl_push(&cpu.esi);
+  rtl_push(&cpu.edi);
   print_asm("pusha");
 }
 
 make_EHelper(popa) {
-  TODO();
-
+  rtl_pop(&cpu.edi);
+  rtl_pop(&cpu.esi);
+  rtl_pop(&cpu.ebp);
+  // attention! do not need to restore esp
+  rtl_pop(&t0);
+  rtl_pop(&cpu.ebx);
+  rtl_pop(&cpu.edx);
+  rtl_pop(&cpu.ecx);
+  rtl_pop(&cpu.eax);
   print_asm("popa");
 }
 
