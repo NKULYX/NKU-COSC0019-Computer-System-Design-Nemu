@@ -27,6 +27,7 @@ make_EHelper(add);
 make_EHelper(cmp); 
 make_EHelper(dec);
 make_EHelper(inc);
+make_EHelper(neg);
 
 // in logic.c
 make_EHelper(xor);
@@ -37,6 +38,7 @@ make_EHelper(sar);
 make_EHelper(shl);
 make_EHelper(shr);
 make_EHelper(or); 
+make_EHelper(not);
 
 // in special.c
 make_EHelper(nop);
