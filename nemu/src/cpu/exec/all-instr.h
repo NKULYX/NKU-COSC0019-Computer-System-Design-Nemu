@@ -21,4 +21,7 @@ make_EHelper(sub);
 
 // in logic.c
 make_EHelper(xor);
-make_EHelper(and); 
+make_EHelper(and);
+
+// in special.c
+make_EHelper(nop);
