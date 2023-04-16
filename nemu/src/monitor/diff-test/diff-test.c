@@ -154,35 +154,35 @@ void difftest_step(uint32_t eip) {
   }
   if(r.ecx != cpu.ecx) {
     diff = true;
-    printf("ecx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("ecx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.ecx, r.ecx);
   }
   if(r.ebx != cpu.ebx) {
     diff = true;
-    printf("ebx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("ebx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.ebx, r.ebx);
   }
   if(r.edx != cpu.edx) {
     diff = true;
-    printf("edx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("edx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.edx, r.edx);
   }
   if(r.ebp != cpu.ebp) {
     diff = true;
-    printf("ebx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("ebx different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.ebp, r.ebp);
   }
   if(r.esp != cpu.esp) {
     diff = true;
-    printf("esp different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("esp different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.esp, r.esp);
   }
   if(r.esi != cpu.esi) {
     diff = true;
-    printf("esi different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("esi different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.esi, r.esi);
   }
   if(r.edi != cpu.edi) {
     diff = true;
-    printf("edi different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("edi different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.edi, r.edi);
   }
   if(r.eip != cpu.eip) {
     diff = true;
-    printf("eip different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eax, r.eax);
+    printf("eip different! NEMU = 0x%08x \t QEMU = 0x%08x\n", cpu.eip, r.eip);
   }
   if (diff) {
     printf("EFLAGS : NEMU = 0x%08x \t QEMU = 0x%08x \n", cpu.eflags.val, r.eflags);
