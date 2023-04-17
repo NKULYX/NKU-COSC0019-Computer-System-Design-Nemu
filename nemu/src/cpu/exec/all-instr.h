@@ -34,6 +34,7 @@ make_EHelper(adc);
 make_EHelper(imul1);
 make_EHelper(imul2);
 make_EHelper(imul3);
+make_EHelper(idiv);
 
 // in logic.c
 make_EHelper(xor);
