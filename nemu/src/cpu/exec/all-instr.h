@@ -55,3 +55,7 @@ make_EHelper(not);
 
 // in special.c
 make_EHelper(nop);
+
+// in system.c
+make_EHelper(in); 
+make_EHelper(out); 
