@@ -25,8 +25,11 @@ uintptr_t loader(_Protect *as, const char *filename) {
   void *pa,*va = DEFAULT_ENTRY;
   while(bytes>0){
   	pa = new_page(); //申请空闲物理页
+    Log("Here!");
   	_map(as, va, pa);//该物理页映射到用户程序虚拟地址空间
+    Log("Here!!");
   	fs_read(fd, pa, PGSIZE);  //读一页文件到该物理页
+    Log("Here!!!");
 
   	va += PGSIZE;
   	bytes -= PGSIZE;
