@@ -19,7 +19,6 @@ static inline _RegSet* sys_write(_RegSet *r){
   size_t count = (int)SYSCALL_ARG4(r);
   uintptr_t i = 0;
   if(fd == 1 || fd == 2) {
-    printf("!");
     for(;i < count; i++) {
       _putc(buf[i]);
     }
