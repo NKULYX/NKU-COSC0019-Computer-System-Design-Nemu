@@ -24,7 +24,7 @@ void fb_write(const void *buf, off_t offset, size_t len) {
   int y_begin = index_begin / _screen.width;
   int index_end = (offset + len) >> 2;
   int x_end = index_end % _screen.width;
-  int y_end = index_end % _screen.width;
+  int y_end = index_end / _screen.width;
   if(y_begin == y_end) {
     _draw_rect(buf, x_begin, y_begin, x_end - x_begin, 1);
   }
