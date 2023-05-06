@@ -32,6 +32,7 @@ static inline _RegSet* sys_write(_RegSet *r){
 
 static inline _RegSet* sys_brk(_RegSet *r) {
   SYSCALL_ARG1(r) = 0;
+  panic("sys_brk!!!");
   return NULL;
 }
 
