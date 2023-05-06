@@ -18,23 +18,9 @@ uintptr_t loader(_Protect *as, const char *filename) {
   // ramdisk_read(DEFAULT_ENTRY, 0, len);
   // return (uintptr_t)DEFAULT_ENTRY;
   int fd = fs_open(filename, 0, 0);
-  int bytes = fs_filesz(fd); //出错在之前为size_t
-
-  Log("Load [%d] %s with size: %d", fd, filename, bytes);
-
-  void *pa,*va = DEFAULT_ENTRY;
-  while(bytes>0){
-  	pa = new_page(); //申请空闲物理页
-    Log("Here!");
-  	_map(as, va, pa);//该物理页映射到用户程序虚拟地址空间
-    Log("Here!!");
-  	fs_read(fd, pa, PGSIZE);  //读一页文件到该物理页
-    Log("Here!!!");
-
-  	va += PGSIZE;
-  	bytes -= PGSIZE;
-  }
-  //fs_read(fd,DEFAULT_ENTRY,bytes);
+  int file_size = fs_filesz(fd);
+  Log("Load [%d] %s with size: %d", fd, filename, file_size);
+  fs_read(fd, DEFAULT_ENTRY, file_size);
   fs_close(fd);
   return (uintptr_t)DEFAULT_ENTRY;
 }
