@@ -8,11 +8,24 @@ static const char *keyname[256] __attribute__((used)) = {
   _KEYS(NAME)
 };
 
-size_t events_read(void *buf, size_t len) {
-  return 0;
-}
-
 static char dispinfo[128] __attribute__((used));
+
+size_t events_read(void *buf, size_t len) {
+	int key = _read_key();
+	bool down = false;
+	if (key & 0x8000) {
+		key ^= 0x8000;
+		down = true;
+	}
+  if(key != _KEY_NONE) {
+    sprintf(buf, "%s %s\n", down ? "kd" : "ku", keyname[key]);
+  }
+  else {
+    unsigned long time = _uptime();
+    sprintf(buf, "t %d\n", time);
+  }
+  return strlen(buf);
+}
 
 void dispinfo_read(void *buf, off_t offset, size_t len) {
   memcpy(buf,dispinfo+offset,len);
