@@ -3,9 +3,14 @@
 void diff_test_skip_qemu();
 void diff_test_skip_nemu();
 
-make_EHelper(lidt) {
-  TODO();
+extern void raise_intr(uint8_t, vaddr_t);
 
+make_EHelper(lidt) {
+  rtl_li(&t0,id_dest->addr);
+  rtl_li(&t1,vaddr_read(t0,2));
+  cpu.idtr.limit = t1;
+  rtl_li(&t1,vaddr_read(t0+2,4));
+  cpu.idtr.base = t1;
   print_asm_template1(lidt);
 }
 
@@ -26,8 +31,8 @@ make_EHelper(mov_cr2r) {
 }
 
 make_EHelper(int) {
-  TODO();
-
+  uint8_t NO = id_dest->val & 0xff;
+  raise_intr(NO, decoding.seq_eip);
   print_asm("int %s", id_dest->str);
 
 #ifdef DIFF_TEST
