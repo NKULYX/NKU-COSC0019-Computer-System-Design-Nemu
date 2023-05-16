@@ -19,7 +19,7 @@ uintptr_t loader(_Protect *as, const char *filename) {
   // return (uintptr_t)DEFAULT_ENTRY;
   int fd = fs_open(filename, 0, 0);
   int file_size = fs_filesz(fd);
-  Log("Load [%d] %s with size: %d", fd, filename, file_size);
+  // Log("Load [%d] %s with size: %d", fd, filename, file_size);
   fs_read(fd, DEFAULT_ENTRY, file_size);
   fs_close(fd);
   return (uintptr_t)DEFAULT_ENTRY;

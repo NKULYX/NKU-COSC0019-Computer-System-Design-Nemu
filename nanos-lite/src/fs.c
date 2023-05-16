@@ -40,11 +40,11 @@ int fs_open(const char *filepath, int flags, int mode) {
   int i = 0;
   for(; i < NR_FILES; i++) {
     if(strcmp(file_table[i].name, filepath) == 0) {
-      Log("Open file:%s in file table at index:%d", filepath, i);
+    //   Log("Open file:%s in file table at index:%d", filepath, i);
       return i;
     }
   }
-  Log("Can not open file:%s", filepath);
+//   Log("Can not open file:%s", filepath);
   assert(0);
   return -1;
 }
@@ -67,7 +67,7 @@ ssize_t fs_read(int fd, void *buf, size_t len) {
 			break;
 		default:
 			ramdisk_read(buf, file_table[fd].disk_offset + file_table[fd].open_offset, len);
-			Log("Read file [%d] start from %d with length %d", fd, file_table[fd].open_offset, len);
+			// Log("Read file [%d] start from %d with length %d", fd, file_table[fd].open_offset, len);
 			file_table[fd].open_offset += len;
 			break;
 	}
@@ -92,7 +92,7 @@ ssize_t fs_write(int fd, const void *buf, size_t len) {
 				len = fs_size - file_table[fd].open_offset;
 			ramdisk_write(buf, file_table[fd].disk_offset + file_table[fd].open_offset, len);
 			file_table[fd].open_offset += len;
-			Log("Write file [%d] start from %d with length %d", fd, file_table[fd].open_offset, len);
+			// Log("Write file [%d] start from %d with length %d", fd, file_table[fd].open_offset, len);
 			break;
 	}
 	return len;
@@ -118,7 +118,7 @@ off_t fs_lseek(int fd, off_t offset, int whence) {
 			result = file_table[fd].open_offset;
 			break;
 	}
-	Log("Seek file [%d] to %d", fd, result);
+	// Log("Seek file [%d] to %d", fd, result);
 	return result;
 }
 
