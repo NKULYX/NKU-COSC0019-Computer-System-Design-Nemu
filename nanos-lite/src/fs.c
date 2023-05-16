@@ -118,7 +118,7 @@ off_t fs_lseek(int fd, off_t offset, int whence) {
 			result = file_table[fd].open_offset;
 			break;
 	}
-	Log("Seek file [%d] to %d", fd, result);
+	// Log("Seek file [%d] to %d", fd, result);
 	return result;
 }
 
