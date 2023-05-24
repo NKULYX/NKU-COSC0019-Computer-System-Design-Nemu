@@ -59,7 +59,7 @@ void free_wp(int no){
 
 bool check_wp(){
   bool ret = false;
-  if(cpu.eip == 0x001012af) {
+  if(cpu.eip == 0x10129b) {
       // printf("CR0 : 0x%x\n", cpu.CR0);
       // printf("CR3 : 0x%x\n", cpu.CR3);
     assert(0);
