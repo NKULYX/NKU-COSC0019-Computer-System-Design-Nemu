@@ -15,7 +15,8 @@ void exec_wrapper(bool);
 
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
-  if(cpu.eip == 0x10129b) {
+  printf("eip: 0x%x\n", cpu.eip);
+  if(cpu.eip == 0x0010129b) {
     printf("0x%x\n", cpu.CR0);
     printf("0x%x\n", cpu.CR3);
     assert(0);
