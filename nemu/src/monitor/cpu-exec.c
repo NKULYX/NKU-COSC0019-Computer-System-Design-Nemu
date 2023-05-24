@@ -28,7 +28,7 @@ void cpu_exec(uint64_t n) {
      * instruction decode, and the actual execution. */
     exec_wrapper(print_flag);
       printf("eip: 0x%x\n", cpu.eip);
-  if(cpu.eip == 0x0010129b) {
+  if(cpu.eip == 0x001012af) {
     printf("0x%x\n", cpu.CR0);
     printf("0x%x\n", cpu.CR3);
     assert(0);
