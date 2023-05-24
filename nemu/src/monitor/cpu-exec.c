@@ -15,13 +15,6 @@ void exec_wrapper(bool);
 
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
-  assert(0);
-  printf("eip: 0x%x\n", cpu.eip);
-  if(cpu.eip == 0x0010129b) {
-    printf("0x%x\n", cpu.CR0);
-    printf("0x%x\n", cpu.CR3);
-    assert(0);
-  }
   if (nemu_state == NEMU_END) {
     printf("Program execution has ended. To restart the program, exit NEMU and run again.\n");
     return;
@@ -34,6 +27,12 @@ void cpu_exec(uint64_t n) {
     /* Execute one instruction, including instruction fetch,
      * instruction decode, and the actual execution. */
     exec_wrapper(print_flag);
+      printf("eip: 0x%x\n", cpu.eip);
+  if(cpu.eip == 0x0010129b) {
+    printf("0x%x\n", cpu.CR0);
+    printf("0x%x\n", cpu.CR3);
+    assert(0);
+  }
 
 #ifdef DEBUG
     /* TODO: check watchpoints here. */
