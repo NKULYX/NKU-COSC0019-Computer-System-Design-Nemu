@@ -103,6 +103,8 @@ static int cmd_info(char *args) {
       for(int i = 0; i < 8; i++) {
         printf("%s : 0x%x\n", reg_name(i, 4), reg_l(i));
       }
+      printf("CR0 : 0x%x\n", cpu.CR0);
+      printf("CR3 : 0x%x\n", cpu.CR3);
     }
     else if(strcmp(subcmd, "w") == 0) {
       show_wp();
