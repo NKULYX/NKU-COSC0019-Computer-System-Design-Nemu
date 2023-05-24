@@ -1,5 +1,6 @@
 #include "monitor/watchpoint.h"
 #include "monitor/expr.h"
+#include "cpu/reg.h"
 
 #define NR_WP 32
 
@@ -58,6 +59,7 @@ void free_wp(int no){
 
 bool check_wp(){
   bool ret = false;
+  if(cpu.CR0 == 0x60000011) assert(0);
   for(WP* i = head; i != NULL; i = i->next){
     bool success = true;
     uint32_t ans = expr(i->expr, &success);
