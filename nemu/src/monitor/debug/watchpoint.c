@@ -59,7 +59,11 @@ void free_wp(int no){
 
 bool check_wp(){
   bool ret = false;
-  if(cpu.CR0 == 0x60000011) assert(0);
+  if(cpu.eip == 0x1012af) {
+      printf("CR0 : 0x%x\n", cpu.CR0);
+      printf("CR3 : 0x%x\n", cpu.CR3);
+    assert(0);
+  }
   for(WP* i = head; i != NULL; i = i->next){
     bool success = true;
     uint32_t ans = expr(i->expr, &success);
