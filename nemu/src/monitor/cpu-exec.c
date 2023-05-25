@@ -27,11 +27,6 @@ void cpu_exec(uint64_t n) {
     /* Execute one instruction, including instruction fetch,
      * instruction decode, and the actual execution. */
     exec_wrapper(print_flag);
-      printf("eip: 0x%x\n", cpu.eip);
-  if(cpu.eip == 0x001012af) {
-    printf("CR0: 0x%x\n", cpu.CR0);
-    printf("CR3: 0x%x\n", cpu.CR3);
-    assert(0);
   }
 
 #ifdef DEBUG
@@ -45,7 +40,6 @@ void cpu_exec(uint64_t n) {
 #endif
 
     if (nemu_state != NEMU_RUNNING) { return; }
-  }
 
   if (nemu_state == NEMU_RUNNING) { nemu_state = NEMU_STOP; }
 }
