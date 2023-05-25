@@ -68,7 +68,7 @@ paddr_t page_translate(vaddr_t addr, bool is_write) {
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
-  uint32_t data;
+  uint32_t data = 0;
   uint8_t *mem = (uint8_t*) &data;
   for(int i = 0; i < len; i++) {
     paddr_t paddr = page_translate(addr + i, false);
