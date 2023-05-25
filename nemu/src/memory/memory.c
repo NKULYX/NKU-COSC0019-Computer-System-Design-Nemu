@@ -68,24 +68,20 @@ paddr_t page_translate(vaddr_t addr, bool is_write) {
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
-  if(PTE_ADDR(addr) != PTE_ADDR(addr + len - 1)) {
-    printf("Access cross pages\n");
-    assert(0);
+  uint32_t data;
+  uint8_t *mem = (uint8_t*) &data;
+  for(int i = 0; i < len; i++) {
+    paddr_t paddr = page_translate(addr + i, false);
+    mem[i] = paddr_read(paddr, 1);
   }
-  else {
-    paddr_t paddr = page_translate(addr, false);
-    return paddr_read(paddr, len);
-  }
+  return data;
 }
 
 void vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  if(PTE_ADDR(addr) != PTE_ADDR(addr + len - 1)) {
-    printf("Access cross pages\n");
-    assert(0);
-  }
-  else {
-    paddr_t paddr = page_translate(addr, false);
-    return paddr_write(paddr, len, data);
+  uint8_t *mem = (uint8_t*) &data;
+  for(int i = 0; i < len; i++) {
+    paddr_t paddr = page_translate(addr + i, true);
+    paddr_write(paddr, 1, mem[i]);
   }
 }
 
