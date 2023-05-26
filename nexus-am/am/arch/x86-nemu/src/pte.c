@@ -66,6 +66,17 @@ void _switch(_Protect *p) {
 }
 
 void _map(_Protect *p, void *va, void *pa) {
+	PDE *pgdir = p->ptr;
+	PDE *pde = &pgdir[PDX(va)];
+	PTE *pgtab;
+	if (*pde & PTE_P) { //present
+		pgtab = (PTE *)PTE_ADDR(*pde);
+	} else {
+		//映射过程中发现需要申请新的页表
+		pgtab = (PTE *)palloc_f();
+		*pde = PTE_ADDR(pgtab) | PTE_P;
+	}
+	pgtab[PTX(va)] = PTE_ADDR(pa) | PTE_P;
 }
 
 void _unmap(_Protect *p, void *va) {
