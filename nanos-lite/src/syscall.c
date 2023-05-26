@@ -7,7 +7,6 @@ ssize_t fs_read(int fd, void *buf, size_t len);
 ssize_t fs_write(int fd, const void *buf, size_t len);
 off_t fs_lseek(int fd, off_t offset, int whence);
 int fs_close(int fd);
-int mm_brk(uint32_t new_brk);
 
 static _RegSet* sys_none(_RegSet* r) {
   // do nothing here, just return 1
@@ -43,9 +42,9 @@ static _RegSet* sys_exit(_RegSet* r) {
 // }
 
 static _RegSet* sys_brk(_RegSet* r) {
-  intptr_t pos = SYSCALL_ARG2(r);
+  // intptr_t pos = SYSCALL_ARG2(r);
   // Log("pos = %p", pos);
-  SYSCALL_ARG1(r) = mm_brk(pos);
+  SYSCALL_ARG1(r) = 0;
   return r;
 }
 
