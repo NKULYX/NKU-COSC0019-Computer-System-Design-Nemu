@@ -1,5 +1,6 @@
 #include "nemu.h"
 
+#if 0
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
  */
@@ -7,7 +8,10 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_HEX, TK_DEC, TK_REG, TK_EQ, TK_NEQ, TK_AND, TK_OR, TK_RS, TK_LS, TK_GEQ, TK_LEQ, TK_DEREF, TK_NEG
+  TK_NOTYPE = 256, TK_EQ
+
+  /* TODO: Add more token types */
+
 };
 
 static struct rule {
@@ -19,26 +23,9 @@ static struct rule {
    * Pay attention to the precedence level of different rules.
    */
 
-  {" +", TK_NOTYPE},                          // spaces
-  {"0x[0-9A-Fa-f][0-9A-Fa-f]*", TK_HEX},      // hex number
-  {"0|[1-9][0-9]*", TK_DEC},                  // dec number
-  {"\\$(eax|ecx|edx|ebx|esp|ebp|esi|edi|eip|ax|cx|dx|bx|sp|bp|si|di|al|cl|dl|bl|ah|ch|dh|bh)", TK_REG},
-  {"\\+", '+'},                               // add
-  {"-", '-'},                                 // sub
-  {"\\*", '*'},                               // mul
-  {"\\/", '/'},                               // div
-  {"\\(", '('},                               // lparen
-  {"\\)", ')'},                               // rparen
-  {"==", TK_EQ},                              // equal
-  {"!=", TK_NEQ},                             // not equal
-  {"&&", TK_AND},                             // and
-  {"\\|\\|", TK_OR},                          // or
-  {">>", TK_RS},                              // right shift
-  {"<<", TK_LS},                              // left shift
-  {"<=", TK_LEQ},                             // less equal
-  {">=", TK_GEQ},                             // great equal
-  {"<", '<'},                                 // less 
-  {">", '>'}                                  // great
+  {" +", TK_NOTYPE},    // spaces
+  {"\\+", '+'},         // plus
+  {"==", TK_EQ}         // equal
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]) )
@@ -94,18 +81,7 @@ static bool make_token(char *e) {
          */
 
         switch (rules[i].token_type) {
-          case TK_NOTYPE:
-            break;
-          default:
-            // if length is greater than buffer size
-            if(substr_len >= 32) {
-              printf("Token length is too long!\n");
-              return false;
-            }
-            tokens[nr_token].type = rules[i].token_type;
-            memset(tokens[nr_token].str, 0, 32);
-            strncpy(tokens[nr_token].str, substr_start, substr_len);
-            nr_token++;
+          default: TODO();
         }
 
         break;
@@ -121,195 +97,6 @@ static bool make_token(char *e) {
   return true;
 }
 
-bool check_parentheses(int p,int q){
-  int cnt = 0;
-  for(int i = p;i < q; i++){
-    if(tokens[i].type == '('){
-      cnt++;
-    }
-    else if(tokens[i].type==')'){
-      cnt--;
-    }
-    if(cnt<=0){
-      if(cnt<0){  //brankets unmatched
-        printf("( and ) unmatched!\n");
-        assert(0);
-      }
-      else return false;  //not in the (<expr>) format
-    }
-  }
-  if(cnt != 1 || tokens[q].type!=')'){
-    printf("( and ) unmatched!\n");
-    assert(0);
-  }
-  return true;
-}
-
-int get_operator_priority(int type) {
-  switch(type){
-    case TK_NOTYPE:
-    case ')':
-      return 0;
-    case TK_OR:
-      return 1;
-    case TK_AND:
-      return 2;
-    case TK_EQ:
-    case TK_NEQ:
-      return 3;
-    case '<':
-    case '>':
-    case TK_LEQ:
-    case TK_GEQ:
-      return 4;
-    case TK_LS:
-    case TK_RS:
-      return 5;
-    case '+':
-    case '-':
-      return 6;
-    case '*':
-    case '/':
-      return 7;
-    case TK_NEG:
-    case TK_DEREF:
-      return 8;
-    case '(':
-      return 9;
-  }
-  assert(0);
-  return 0;
-}
-
-bool is_number_token(int type) {
-  if(type == TK_DEC || type == TK_HEX || type == TK_REG) {
-    return true;
-  }
-  return false;
-}
-
-int get_token_value(Token token) {
-  int ret_value = 0;
-    if(token.type == TK_DEC) {
-      sscanf(token.str, "%d", &ret_value);
-      return ret_value;
-    }
-    else if(token.type == TK_HEX) {
-      sscanf(token.str, "%x", &ret_value);
-      return ret_value;
-    }
-    else if(token.type == TK_REG) {
-      char reg[4] = {0};
-      sscanf(token.str, "$%s", reg);
-      for(int i = 0; i < 8; i++) {
-        if(strcasecmp(reg, regsl[i]) == 0) {
-          return cpu.gpr[i]._32;
-        }
-        else if(strcasecmp(reg, regsw[i]) == 0) {
-          return cpu.gpr[i]._16;
-        }
-        else if(strcasecmp(reg, regsb[i]) == 0) {
-          return cpu.gpr[i % 4]._8[i / 4];
-        }
-        else if(strcasecmp(reg, "eip") == 0) {
-          return cpu.eip;
-        }
-        else {
-          printf("Illegal reg!\n");
-          assert(0);
-        }
-      }
-    }
-    else {
-      printf("Illegal value token!\n");
-      assert(0);
-    }
-    return 0;
-}
-
-int eval(int p, int q, bool* success) {
-  if(p > q) {
-    printf("Bad Expression!\n");
-    success = false;
-    return 0;
-  }
-  // only one token
-  if(p == q) {
-    return get_token_value(tokens[p]);
-  }
-  // else if(check_parentheses(p, q) == true){
-  //   return eval(p + 1, q - 1);
-  // }
-  else {
-    tokens[++q].type = TK_NOTYPE;
-    // operand stack and operator stack
-    int operands_stack[32];
-    Token operators_stack[32];
-    int operands_index = -1, operators_index = 0;
-    operators_stack[0].type = TK_NOTYPE;
-    for(int i = p; i <= q; i++) {
-      // if token is number push into operand stack
-      if(is_number_token(tokens[i].type)) {
-        operands_stack[++operands_index] = get_token_value(tokens[i]);
-      }
-      // if token is operator
-      else {
-        // check priority of the top of stack
-        // if current operator's priority is greater than the top of stack
-        // push the token into operator stack
-        if(get_operator_priority(tokens[i].type) > get_operator_priority(operators_stack[operators_index].type)) {
-          if(tokens[i].type =='(') {
-            operators_stack[++operators_index].type = ')';
-          }
-          else {
-            operators_stack[++operators_index] = tokens[i];
-          }
-        }
-        // else calculate the tmp result
-        else {
-          while(operators_stack[operators_index].type != TK_NOTYPE &&
-                get_operator_priority(tokens[i].type) <= get_operator_priority(operators_stack[operators_index].type)) {
-            if(operators_stack[operators_index].type == ')') {
-              operators_index--;
-              break;
-            }
-            else {
-              switch(operators_stack[operators_index--].type) {
-                case '+': operands_stack[operands_index - 1] = operands_stack[operands_index] + operands_stack[operands_index - 1];operands_index--;break;
-                case '-': operands_stack[operands_index - 1] = operands_stack[operands_index] - operands_stack[operands_index - 1];operands_index--;break;
-                case '*': operands_stack[operands_index - 1] = operands_stack[operands_index] * operands_stack[operands_index - 1];operands_index--;break;
-                case '/': operands_stack[operands_index - 1] = operands_stack[operands_index] / operands_stack[operands_index - 1];operands_index--;break;
-                case '<': operands_stack[operands_index - 1] = operands_stack[operands_index] < operands_stack[operands_index - 1];operands_index--;break;
-                case '>': operands_stack[operands_index - 1] = operands_stack[operands_index] > operands_stack[operands_index - 1];operands_index--;break;
-                case TK_EQ: operands_stack[operands_index - 1] = operands_stack[operands_index] == operands_stack[operands_index - 1];operands_index--;break;
-                case TK_NEQ: operands_stack[operands_index - 1] = operands_stack[operands_index] != operands_stack[operands_index - 1];operands_index--;break;
-                case TK_AND: operands_stack[operands_index - 1] = operands_stack[operands_index] && operands_stack[operands_index - 1];operands_index--;break;
-                case TK_OR: operands_stack[operands_index - 1] = operands_stack[operands_index] || operands_stack[operands_index - 1];operands_index--;break;
-                case TK_LS: operands_stack[operands_index - 1] = operands_stack[operands_index] << operands_stack[operands_index - 1];operands_index--;break;
-                case TK_RS: operands_stack[operands_index - 1] = operands_stack[operands_index] >> operands_stack[operands_index - 1];operands_index--;break;
-                case TK_LEQ: operands_stack[operands_index - 1] = operands_stack[operands_index] <= operands_stack[operands_index - 1];operands_index--;break;
-                case TK_GEQ: operands_stack[operands_index - 1] = operands_stack[operands_index] >= operands_stack[operands_index - 1];operands_index--;break;
-                case TK_NEG: operands_stack[operands_index] = -operands_stack[operands_index];break;
-                case TK_DEREF: operands_stack[operands_index] = paddr_read(operands_stack[operands_index], 4);break;
-                default:success = false;return 0;
-              }
-            }
-          }
-          if(tokens[i].type != ')' && tokens[i].type != TK_NOTYPE) {
-            operators_stack[++operators_index] = tokens[i];
-          }
-        }
-      }
-    }
-    if(operators_index != 0) {
-      *success = false;
-      return 0;
-    }
-    return operands_stack[0];
-  }
-}
-
-
 uint32_t expr(char *e, bool *success) {
   if (!make_token(e)) {
     *success = false;
@@ -317,19 +104,388 @@ uint32_t expr(char *e, bool *success) {
   }
 
   /* TODO: Insert codes to evaluate the expression. */
-  // deal with one operand operator
-  for(int i = 0; i < nr_token; i++) {
-    if(tokens[i].type == '*' || tokens[i].type == '-') {
-      if(i == 0 || 
-        (tokens[i - 1].type != TK_DEC && 
-         tokens[i - 1].type != TK_HEX &&
-         tokens[i - 1].type != TK_REG &&
-         tokens[i - 1].type != ')')) {
-        tokens[i].type = tokens[i].type == '*' ? TK_DEREF : TK_NEG;
-      }
+  TODO();
+
+  return 0;
+}
+#endif // if 0
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+
+static int isspace(int v) {
+  return v == ' ' || v == '\t';
+}
+
+static int isnumber(int v) {
+  return v >= '0' && v <= '9';
+}
+
+static int isalpha(int v) {
+  return (v >= 'a' && v <= 'z') ||
+         (v >= 'A' && v <= 'Z');
+}
+
+typedef struct {
+  const char *buffer;
+  size_t idx;
+} ParserCtx;
+
+static ParserCtx ctx;
+
+static void next() {
+  while (isspace(ctx.buffer[++ctx.idx]));
+}
+
+static void nexti(int i) {
+  while (i--) {
+    next();
+  }
+}
+
+static char chr() {
+  return ctx.buffer[ctx.idx];
+}
+
+static const char *pchr() {
+  return ctx.buffer + ctx.idx;
+}
+
+typedef struct {
+  int32_t value;
+  uint8_t valid;
+} Option;
+
+static Option option() {
+  return (Option) {0, 0};
+}
+
+static Option make_value(int32_t v) {
+  return (Option) {v, 1};
+}
+
+static Option oadd(Option a, Option b) {
+  Option result;
+  result.value = a.value + b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option osub(Option a, Option b) {
+  Option result;
+  result.value = a.value - b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option omul(Option a, Option b) {
+  Option result;
+  result.value = a.value * b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option odiv(Option a, Option b) {
+  // sanity check
+  if (b.value == 0) {
+    return option();
+  }
+  Option result;
+  result.value = a.value / b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option onot(Option v) {
+  v.value = !v.value;
+  return v;
+}
+
+static Option olt(Option a, Option b) {
+  Option result;
+  result.value = a.value < b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option ogt(Option a, Option b) {
+  Option result;
+  result.value = a.value > b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option ole(Option a, Option b) {
+  Option result;
+  result.value = a.value <= b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oge(Option a, Option b) {
+  Option result;
+  result.value = a.value >= b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oeq(Option a, Option b) {
+  Option result;
+  result.value = a.value == b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option one(Option a, Option b) {
+  Option result;
+  result.value = a.value != b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oand(Option a, Option b) {
+  Option result;
+  result.value = a.value && b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oor(Option a, Option b) {
+  Option result;
+  result.value = a.value || b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option lor_expr();
+
+static Option land_expr();
+
+static Option eq_expr();
+
+static Option rel_expr();
+
+static Option add_expr();
+
+static Option mul_expr();
+
+static Option factor();
+
+static Option number();
+
+static Option variable();
+
+static Option dereference(Option p);
+
+static Option lor_expr() {
+  Option result = land_expr();
+  while (chr() == '|' && pchr()[1] == '|') {
+    nexti(2);
+    result = oor(result, land_expr());
+  }
+  return result;
+}
+
+static Option land_expr() {
+  Option result = eq_expr();
+  while (chr() == '&' && pchr()[1] == '&') {
+    nexti(2);
+    result = oand(result, eq_expr());
+  }
+  return result;
+}
+
+static Option eq_expr() {
+  Option result = rel_expr();
+  while ((chr() == '=' || chr() == '!') && pchr()[1] == '=') {
+    switch (chr()) {
+      case '=':
+        nexti(2);
+        result = oeq(result, rel_expr());
+        break;
+      case '!':
+        nexti(2);
+        result = one(result, rel_expr());
+        break;
     }
   }
-  // return the calculated result
-  int res = eval(0, nr_token - 1, success);
-  return res;
+  return result;
 }
+
+static Option rel_expr() {
+  Option result = add_expr();
+  while (chr() == '<' || chr() == '>') {
+    switch (chr()) {
+      case '<':
+        if (pchr()[1] == '=') {
+          nexti(2);
+          result = ole(result, add_expr());
+        } else {
+          next();
+          result = olt(result, add_expr());
+        }
+        break;
+      case '>':
+        if (pchr()[1] == '=') {
+          nexti(2);
+          result = oge(result, add_expr());
+        } else {
+          next();
+          result = ogt(result, add_expr());
+        }
+        break;
+    }
+  }
+  return result;
+}
+
+static Option add_expr() {
+  Option result = mul_expr();
+  while (chr() == '+' || chr() == '-') {
+    switch (chr()) {
+      case '+':
+        next();
+        result = oadd(result, mul_expr());
+        break;
+      case '-':
+        next();
+        result = osub(result, mul_expr());
+        break;
+    }
+  }
+  return result;
+}
+
+static Option mul_expr() {
+  Option result = factor();
+  while (chr() == '*' || chr() == '/') {
+    switch (chr()) {
+      case '*':
+        next();
+        result = omul(result, factor());
+        break;
+      case '/':
+        next();
+        result = odiv(result, factor());
+        break;
+    }
+  }
+  return result;
+}
+
+static Option factor() {
+  switch (chr()) {
+    case '+':
+      next();
+      return factor();
+    case '-':
+      next();
+      return osub(make_value(0), factor());
+    case '!':
+      next();
+      return onot(factor());
+    case '*':
+      next();
+      return dereference(factor());
+  }
+
+  if (chr() == '(') {
+    next();
+    Option result = lor_expr();
+    if (chr() != ')') {
+      return option();
+    }
+    next();
+    return result;
+  } else if (isnumber(chr())) {
+    return number();
+  } else if (chr() == '$') {
+    return variable();
+  }
+  return option();
+}
+
+static Option number() {
+  int32_t result = 0;
+  int32_t factor;
+  if (chr() == '0' && pchr()[1] == 'x') {
+    nexti(2);
+    factor = 16;
+  } else if (chr() == '0' && pchr()[1] == 'b') {
+    nexti(2);
+    factor = 2;
+  } else if (chr() == '0') {
+    next();
+    factor = 8;
+  } else {
+    factor = 10;
+  }
+
+  while ((chr() >= '0' && chr() <= '9') ||
+         (chr() >= 'a' && chr() <= 'f') ||
+         (chr() >= 'A' && chr() <= 'F')) {
+    int32_t v = chr();
+    next();
+
+    if (v >= 'a' && v <= 'f') {
+      v = v - 'a' + 10;
+    } else if (v >= 'A' && v <= 'F') {
+      v = v - 'A' + 10;
+    } else {
+      v = v - '0';
+    }
+    result = result * factor + v;
+  }
+  return make_value(result);
+}
+
+static Option variable() {
+  if (chr() != '$') {
+    return option();
+  }
+  next();
+
+  char buf[64];
+  int32_t i = 0;
+
+  while (isalpha(chr()) && i < 64) {
+    buf[i++] = chr();
+    next();
+  }
+  buf[i] = '\0';
+
+  for (int i = 0; i < 8; i++) {
+    if (strcmp(buf, regsl[i]) == 0) {
+      return make_value(reg_l(i));
+    }
+    if (strcmp(buf, regsw[i]) == 0) {
+      return make_value(reg_w(i));
+    }
+    if (strcmp(buf, regsb[i]) == 0) {
+      return make_value(reg_b(i));
+    }
+  }
+  if (strcmp(buf, "eip") == 0) {
+    return make_value(cpu.eip);
+  }
+  return option();
+}
+
+static Option dereference(Option p) {
+  if (!p.valid) {
+    return option();
+  }
+  return make_value(vaddr_read(p.value, 4));
+}
+
+uint32_t expr(char *e, bool *success) {
+  ctx.buffer = e;
+  ctx.idx = 0;
+  Option opt = lor_expr();
+  *success = opt.valid;
+  return opt.value;
+}
+
+// dummy function
+void init_regex() {}
