@@ -62,9 +62,12 @@ typedef struct {
   // (not used in NEMU, just for differential testing)
   uint16_t cs;
 
+  // control registers
   CR0 cr0;
   CR3 cr3;
 
+  // interrupt signal
+  bool INTR;
 
 } CPU_state;
 
