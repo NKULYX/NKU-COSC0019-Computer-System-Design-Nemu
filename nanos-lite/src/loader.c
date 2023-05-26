@@ -1,6 +1,6 @@
 #include "common.h"
 
-#define DEFAULT_ENTRY ((void *)0x4000000)
+#define DEFAULT_ENTRY ((void *)0x8048000)
 
 extern void ramdisk_read(void*, off_t, size_t);
 extern size_t get_ramdisk_size();
@@ -20,7 +20,14 @@ uintptr_t loader(_Protect *as, const char *filename) {
   int fd = fs_open(filename, 0, 0);
   int file_size = fs_filesz(fd);
   // Log("Load [%d] %s with size: %d", fd, filename, file_size);
-  fs_read(fd, DEFAULT_ENTRY, file_size);
+  void *pa,*va = DEFAULT_ENTRY;
+  while(file_size>0){
+  	pa = new_page();
+  	_map(as, va, pa);
+  	fs_read(fd, pa, PGSIZE);
+  	va += PGSIZE;
+  	file_size -= PGSIZE;
+  }
   fs_close(fd);
   return (uintptr_t)DEFAULT_ENTRY;
 }
