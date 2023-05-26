@@ -69,7 +69,6 @@ paddr_t page_translate(vaddr_t addr, bool is_write) {
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
-  printf("read from va 0%08x\n", addr);
   uint32_t data = 0;
   uint8_t *mem = (uint8_t*) &data;
   for(int i = 0; i < len; i++) {
