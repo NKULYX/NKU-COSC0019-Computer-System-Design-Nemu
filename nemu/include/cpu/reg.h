@@ -15,7 +15,7 @@ enum { R_AL, R_CL, R_DL, R_BL, R_AH, R_CH, R_DH, R_BH };
  */
 
 typedef struct {
-  union {
+  union {  
     union {
       uint32_t _32;
       uint16_t _16;
@@ -25,41 +25,37 @@ typedef struct {
     /* Do NOT change the order of the GPRs' definitions. */
 
     /* In NEMU, rtlreg_t is exactly uint32_t. This makes RTL instructions
-     * in PA2 able to directly access these registers.
-     */
+    * in PA2 able to directly access these registers.
+    */
     struct {
       rtlreg_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
     };
   };
-
   vaddr_t eip;
 
-  // eflags register
-  // (only CF, ZF, SF, IF and OF are available)
   union {
-    struct {
-      uint32_t CF: 1; // bit 0
-      uint32_t   : 5;
-      uint32_t ZF: 1; // bit 6
-      uint32_t SF: 1; // bit 7
-      uint32_t   : 1;
-      uint32_t IF: 1; // bit 9
-      uint32_t   : 1;
-      uint32_t OF: 1; // bit 11
-      uint32_t   : 20;
-    };
     uint32_t val;
+    struct {
+      uint32_t CF:1;
+      unsigned:5;
+      uint32_t ZF:1;
+      uint32_t SF:1;
+      unsigned:1;
+      uint32_t IF:1;
+      unsigned:1;
+      uint32_t OF:1;
+      unsigned:20;
+    };
   } eflags;
 
-  // IDT base & limit
-  struct {
-    uint32_t base;
-    uint16_t limit;
-  } idtr;
+  struct{
+      uint16_t limit;
+      uint32_t base;
+  }idtr;
+  uint32_t cs;
 
-  // cs register
-  // (not used in NEMU, just for differential testing)
-  uint16_t cs;
+  uint32_t CR0;
+  uint32_t CR3;
 
 } CPU_state;
 

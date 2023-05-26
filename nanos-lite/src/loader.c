@@ -1,32 +1,33 @@
 #include "common.h"
 
-void ramdisk_read(void *buf, off_t offset, size_t len);
-size_t get_ramdisk_size();
+#define DEFAULT_ENTRY ((void *)0x8048000)
 
-size_t fs_filesz(int fd);
-int fs_open(const char *pathname, int flags, int mod);
-ssize_t fs_read(int fd, void *buf, size_t len);
-ssize_t fs_write(int fd, const void *buf, size_t len);
-off_t fs_lseek(int fd, off_t offset, int whence);
-int fs_close(int fd);
+extern void ramdisk_read(void*, off_t, size_t);
+extern size_t get_ramdisk_size();
 
-#define DEFAULT_ENTRY ((void *)0x4000000)
+extern void _map(_Protect *p, void *va, void *pa);
+extern void* new_page(void);
 
-// PA3.1 impl
-
-// uintptr_t loader(_Protect *as, const char *filename) {
-//   ramdisk_read(DEFAULT_ENTRY, 0, get_ramdisk_size());
-//   return (uintptr_t)DEFAULT_ENTRY;
-// }
+extern int fs_open(const char *pathname, int flags, int mode);
+extern size_t fs_filesz(int fd);
+extern ssize_t fs_read(int fd, void *buf, size_t len);
+extern int fs_close(int fd);
 
 uintptr_t loader(_Protect *as, const char *filename) {
+  // size_t len = get_ramdisk_size();
+  // ramdisk_read(DEFAULT_ENTRY, 0, len);
+  // return (uintptr_t)DEFAULT_ENTRY;
   int fd = fs_open(filename, 0, 0);
-  assert(fd >= 0);
-
-  int size = fs_filesz(fd);
-
-  ssize_t read = fs_read(fd, DEFAULT_ENTRY, size);
-  assert(read == size);
-
+  int file_size = fs_filesz(fd);
+  // Log("Load [%d] %s with size: %d", fd, filename, file_size);
+  void *pa,*va = DEFAULT_ENTRY;
+  while(file_size>0){
+  	pa = new_page();
+  	_map(as, va, pa);
+  	fs_read(fd, pa, PGSIZE);
+  	va += PGSIZE;
+  	file_size -= PGSIZE;
+  }
+  fs_close(fd);
   return (uintptr_t)DEFAULT_ENTRY;
 }
