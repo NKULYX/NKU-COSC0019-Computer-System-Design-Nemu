@@ -36,13 +36,120 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+static int cmd_si(char *args) {
+  if (!args) {
+    cpu_exec(1);
+    return 0;
+  }
+
+  int v;
+  int ret = sscanf(args, "%d", &v);
+  if (ret != 1) {
+    printf("invalid param '%s'\n", args);
+    return 0;
+  }
+
+  cpu_exec(v);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  if (!args) {
+    printf("need param\n");
+    return 0;
+  }
+  switch (*args) {
+    case 'r':
+      for (int i = 0; i < 4; i++) {
+        printf("%4s = 0x%08x    %4s = 0x%08x\n",
+            regsl[i], reg_l(i), regsl[i + 4], reg_l(i + 4));
+      }
+      printf("%4s = 0x%08x\n", "eip", cpu.eip);
+      printf("\n");
+      break;
+    case 'w':
+      for(WP *wp = wp_head(); wp; wp = wp->next) {
+        printf("%2d: %s\n", wp->NO, wp->expr);
+      }
+      break;
+    default:
+      printf("invalid param '%s'\n", args);
+      break;
+  }
+  return 0;
+}
+
+static int cmd_p(char *args) {
+  bool valid;
+  int result = expr(args, &valid);
+  if (!valid) {
+    printf("invalid expression\n");
+    return 0;
+  }
+  printf("%d\n"
+         "0x%08x\n", result, result);
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  int n;
+  if (sscanf(args, "%d", &n) != 1) {
+    printf("invalid param '%s'\n", args);
+    return 0;
+  }
+
+  char *p = strchr(args, ' ');
+  if (!p || !p[1]) {
+    printf("invalid param '%s'\n", args);
+    return 0;
+  }
+
+  bool valid;
+  int addr = expr(p + 1, &valid);
+  if (!valid) {
+    printf("invalid expression\n");
+    return 0;
+  }
+  addr &= ~0xF;
+
+  int cnt = 0;
+  for (int i = 0; i < (n + 3) / 4; i++) {
+    printf ("0x%08x : ", addr + i * 0x10);
+    for (int j = 0; j < 4 && cnt < n; j++) {
+      printf("%08x  ", vaddr_read(addr + cnt++, 4));
+    }
+    printf("\n");
+  }
+  return 0;
+}
+
+static int cmd_w(char *args) {
+  if (!args) {
+    printf("need param\n");
+    return 0;
+  }
+  WP *alloc = new_wp();
+  strcpy(alloc->expr, args);
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  int delete_ID;
+  if (sscanf(args, "%d", &delete_ID) != 1) {
+    printf("invalid param '%s'\n", args);
+    return 0;
+  }
+  for(WP *wp = wp_head(); wp; wp = wp->next) {
+    if (wp->NO == delete_ID) {
+      free_wp(wp);
+      return 0;
+    }
+  }
+  printf("invalid ID: %d\n", delete_ID);
+  return 0;
+}
+
 static int cmd_help(char *args);
-static int cmd_si(char *args);
-static int cmd_info(char *args);
-static int cmd_p(char* args);
-static int cmd_x(char* args);
-static int cmd_w(char* args);
-static int cmd_d(char* args);
 
 static struct {
   char *name;
@@ -52,14 +159,14 @@ static struct {
   { "help", "Display informations about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-  { "si", "Step to the next instruction", cmd_si},
-  { "info", "Print state of regs using 'r' or watchpoint using 'w'", cmd_info},
-  { "p", "Calculate the result of target experssion", cmd_p},
-  { "x", "Scan the target address of memory and show the value in the address", cmd_x},
-  { "w", "Set watchpoint", cmd_w},
-  { "d", "Delete watchpoint", cmd_d}
-  /* TODO: Add more commands */
 
+  /* TODO: Add more commands */
+  { "si", "Single step", cmd_si },
+  { "info", "Show nemu states", cmd_info },
+  { "p", "Evaluate an expression", cmd_p },
+  { "x", "Memory inspection", cmd_x },
+  { "w", "Add a watchpoint", cmd_w },
+  { "d", "Delete a watchpoint", cmd_d },
 };
 
 #define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0]))
@@ -84,100 +191,6 @@ static int cmd_help(char *args) {
     }
     printf("Unknown command '%s'\n", arg);
   }
-  return 0;
-}
-
-static int cmd_si(char *args) {
-  int steps = strtok(args, " ") == NULL ? 1 : atoi(strtok(args, " "));
-  cpu_exec(steps);
-  return 0;
-}
-
-static int cmd_info(char *args) {
-  char* subcmd = strtok(args, " ");
-  if(subcmd == NULL) {
-    printf("Please input subcmd to show information\n");
-  }
-  else {
-    if(strcmp(subcmd, "r") == 0) {
-      for(int i = 0; i < 8; i++) {
-        printf("%s : 0x%x\n", reg_name(i, 4), reg_l(i));
-      }
-      printf("CR0 : 0x%x\n", cpu.CR0);
-      printf("CR3 : 0x%x\n", cpu.CR3);
-    }
-    else if(strcmp(subcmd, "w") == 0) {
-      show_wp();
-    }
-    else {
-      printf("Undefined subcmd\n");
-    }
-  }
-  return 0;
-}
-
-static int cmd_p(char* args) {
-  char* expression = strtok(args, " ");
-  bool success = true;
-  int value = expr(expression, &success);
-  if(success) {
-    printf("ans = 0x%08x\n", value);
-  }
-  else {
-    printf("Illegal Expression!\n");
-  }
-  return 0;
-}
-
-static int cmd_x(char* args) {
-  char* arg1 = strtok(args, " ");
-  if(arg1 == NULL) {
-    printf("Pleas input N for continuous n address\n");
-    return 0;
-  }
-  int n = atoi(arg1);
-  char* arg2 = args + strlen(arg1) + 1;
-  arg2 = strtok(arg2, " ");
-  if(arg2 == NULL) {
-    printf("Pleas input Expr for beginning address\n");
-    return 0;
-  }
-  bool success = true;
-  int begin_address = expr(arg2, &success);
-  if(success) {
-    begin_address = strtoul(arg2, NULL, 16);
-  }
-  else {
-    printf("Illegal Addrerss Expression!\n");
-  }
-  for(int i = 0; i < n; i++) {
-    uint32_t value = paddr_read(begin_address, 4);
-    printf("0x%x : 0x%08x\n", begin_address, value);
-    begin_address += 4;
-  }
-  return 0;
-}
-
-static int cmd_w(char* args) {
-  WP* wp = new_wp();
-  char* arg = strtok(NULL, "\n");
-  strcpy(wp->expr, arg);
-  bool success = true;
-  wp->value = expr(arg, &success);
-  if(success){
-    printf("watchpoint %d : %s\n", wp->NO, wp->expr);
-  }
-  else{
-    printf("Illegal Expression!\n");
-    free_wp(wp->NO);
-  }
-  return 0;
-}
-
-static int cmd_d(char* args) {
-  char* arg = strtok(NULL, "\n");
-  int no = atoi(arg);
-  free_wp(no);
   return 0;
 }
 
