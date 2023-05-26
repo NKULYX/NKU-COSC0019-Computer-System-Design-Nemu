@@ -10,7 +10,10 @@ ssize_t fs_write(int fd, const void *buf, size_t len);
 off_t fs_lseek(int fd, off_t offset, int whence);
 int fs_close(int fd);
 
-#define DEFAULT_ENTRY ((void *)0x4000000)
+#define DEFAULT_ENTRY ((void *)0x4048000)
+
+void* new_page(void);
+void _map(_Protect *p, void *va, void *pa);
 
 // PA3.1 impl
 
@@ -25,8 +28,17 @@ uintptr_t loader(_Protect *as, const char *filename) {
 
   int size = fs_filesz(fd);
 
-  ssize_t read = fs_read(fd, DEFAULT_ENTRY, size);
-  assert(read == size);
+  void *pa = NULL;
+  void *va = DEFAULT_ENTRY;
+  while (size >= 0) {
+    pa = new_page();
+    _map(as, va, pa);
+    fs_read(fd, pa, PGSIZE);
+
+    va += PGSIZE;
+    size -= PGSIZE;
+  }
+  fs_close(fd);
 
   return (uintptr_t)DEFAULT_ENTRY;
 }
