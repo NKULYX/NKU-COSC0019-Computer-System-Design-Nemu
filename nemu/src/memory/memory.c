@@ -61,10 +61,11 @@ paddr_t page_translate(vaddr_t addr, bool is_write) {
       uint32_t page = PTE_ADDR(pte.val);
       uint32_t page_off = OFF(addr);
 
+      Log("va 0x%08x -> pa 0x%08x\n", addr, page | page_off);
 	    return page | page_off; 
 	}
 
-    return addr;
+  return addr;
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
