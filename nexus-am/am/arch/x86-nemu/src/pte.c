@@ -1,6 +1,7 @@
 #include <x86.h>
 
 #define PG_ALIGN __attribute((aligned(PGSIZE)))
+#define push(v) *(--ptr)=(v)
 
 static PDE kpdirs[NR_PDE] PG_ALIGN;
 static PTE kptabs[PMEM_SIZE / PGSIZE] PG_ALIGN;
@@ -79,5 +80,18 @@ void _unmap(_Protect *p, void *va) {
 }
 
 _RegSet *_umake(_Protect *p, _Area ustack, _Area kstack, void *entry, char *const argv[], char *const envp[]) {
-  return NULL;
+  uint32_t *ptr = ustack.end;
+
+  for (int i = 0; i < 8; i++) {
+    push(0);
+  }
+  push(0x202);
+  push(0x8);
+  push((uint32_t) entry);
+  push(0);
+  push(0x81);
+  for (int i = 0; i < 8; i++) {
+    push(0);
+  }
+  return (_RegSet *)ptr;
 }
