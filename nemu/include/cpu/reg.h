@@ -52,19 +52,18 @@ typedef struct {
     uint32_t val;
   } eflags;
 
-  // IDT base & limit
   struct {
     uint32_t base;
     uint16_t limit;
   } idtr;
 
-  // cs register
-  // (not used in NEMU, just for differential testing)
   uint16_t cs;
 
   CR0 cr0;
   CR3 cr3;
-  
+
+  bool INTR;
+
 } CPU_state;
 
 extern CPU_state cpu;

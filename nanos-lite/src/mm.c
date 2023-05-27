@@ -1,11 +1,11 @@
 #include "proc.h"
 #include "memory.h"
 
-static void *pf = NULL;
-
 #define _ROUND_MASK(x, y) ((__typeof__(x))((y)-1))
 #define ROUND_UP(x, y) ((((x)-1) | _ROUND_MASK(x, y))+1)
 #define ROUND_DOWN(x, y) ((x) & ~_ROUND_MASK(x, y))
+
+static void *pf = NULL;
 
 void* new_page(void) {
   assert(pf < (void *)_heap.end);

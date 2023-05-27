@@ -91,6 +91,7 @@ static inline void restart() {
   // reset cs register
   cpu.cs = 8;
 
+  // reset control register
   cpu.cr0.val = 0x60000011;
 
 #ifdef DIFF_TEST

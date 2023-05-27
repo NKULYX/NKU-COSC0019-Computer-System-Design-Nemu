@@ -29,8 +29,6 @@ void paddr_write(paddr_t addr, int len, uint32_t data) {
   memcpy(guest_to_host(addr), &data, len);
 }
 
-
-
 uint32_t page_translate(uint32_t va, bool is_write) {
   if (!cpu.cr0.paging) {
     return va;

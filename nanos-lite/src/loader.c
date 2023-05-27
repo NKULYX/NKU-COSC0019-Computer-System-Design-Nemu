@@ -1,5 +1,7 @@
 #include "common.h"
 
+#define min(a, b) ((a)<(b)?(a):(b))
+
 void ramdisk_read(void *buf, off_t offset, size_t len);
 size_t get_ramdisk_size();
 
@@ -10,17 +12,11 @@ ssize_t fs_write(int fd, const void *buf, size_t len);
 off_t fs_lseek(int fd, off_t offset, int whence);
 int fs_close(int fd);
 
-#define DEFAULT_ENTRY ((void *)0x4048000)
-
 void* new_page(void);
 void _map(_Protect *p, void *va, void *pa);
 
-// PA3.1 impl
+#define DEFAULT_ENTRY ((void *)0x8048000)
 
-// uintptr_t loader(_Protect *as, const char *filename) {
-//   ramdisk_read(DEFAULT_ENTRY, 0, get_ramdisk_size());
-//   return (uintptr_t)DEFAULT_ENTRY;
-// }
 
 uintptr_t loader(_Protect *as, const char *filename) {
   int fd = fs_open(filename, 0, 0);
