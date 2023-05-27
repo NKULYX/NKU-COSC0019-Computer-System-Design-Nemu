@@ -3,6 +3,10 @@
 
 static void *pf = NULL;
 
+#define _ROUND_MASK(x, y) ((__typeof__(x))((y)-1))
+#define ROUND_UP(x, y) ((((x)-1) | _ROUND_MASK(x, y))+1)
+#define ROUND_DOWN(x, y) ((x) & ~_ROUND_MASK(x, y))
+
 void* new_page(void) {
   assert(pf < (void *)_heap.end);
   void *p = pf;
@@ -16,6 +20,20 @@ void free_page(void *p) {
 
 /* The brk() system call handler. */
 int mm_brk(uint32_t new_brk) {
+  if (current->cur_brk == 0) {
+    current->cur_brk = current->max_brk = new_brk;
+  }
+  else {
+    if (new_brk > current->max_brk) {
+      uint32_t va = ROUND_UP(current->max_brk, PGSIZE);
+      while (va <= new_brk) {
+        _map(&current->as, (void *)va, new_page());
+        va += PGSIZE;
+      }
+      current->max_brk = new_brk;
+    }
+    current->cur_brk = new_brk;
+  }
   return 0;
 }
 
