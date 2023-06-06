@@ -82,6 +82,9 @@ void printd(uint32_t v) {
 }
 
 void _map(_Protect *p, void *va, void *pa) {
+  print("map va ");
+  printd((uint32_t)va);
+  print("\n");
   PDE *ppde = (PDE *)p->ptr + PDX(va);
   if (!(*ppde & PTE_P)) {
     *ppde = (uint32_t)palloc_f() | PTE_P;
@@ -99,18 +102,22 @@ void _unmap(_Protect *p, void *va) {
 _RegSet *_umake(_Protect *p, _Area ustack, _Area kstack, void *entry, char *const argv[], char *const envp[]) {
   uint32_t *ptr = ustack.end;
 
+  // 8 general registers for '_start'
   for (int i = 0; i < 8; i++) {
     push(0);
   }
 
-  push(0x202); 
-  push(0x8);
-  push((uint32_t) entry);
-  push(0);
-  push(0x81);
+  // trap frame
+  push(0x202);            // eflags
+  push(0x8);              // cs
+  push((uint32_t) entry); // eip
+  push(0);                // error code
+  push(0x81);             // irq
+  // 8 general register in trap frame
   for (int i = 0; i < 8; i++) {
     push(0);
   }
 
+  // write ptr to tf
   return (_RegSet *)ptr;
 }

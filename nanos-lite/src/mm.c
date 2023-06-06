@@ -1,9 +1,9 @@
 #include "proc.h"
 #include "memory.h"
 
-#define _ROUND_MASK(x, y) ((__typeof__(x))((y)-1))
-#define ROUND_UP(x, y) ((((x)-1) | _ROUND_MASK(x, y))+1)
-#define ROUND_DOWN(x, y) ((x) & ~_ROUND_MASK(x, y))
+#define __round_mask(x, y) ((__typeof__(x))((y)-1))
+#define round_up(x, y) ((((x)-1) | __round_mask(x, y))+1)
+#define round_down(x, y) ((x) & ~__round_mask(x, y))
 
 static void *pf = NULL;
 
@@ -25,11 +25,15 @@ int mm_brk(uint32_t new_brk) {
   }
   else {
     if (new_brk > current->max_brk) {
-      uint32_t va = ROUND_UP(current->max_brk, PGSIZE);
+      // map memory region [current->max_brk, new_brk)
+      // into address space current->as
+
+      uint32_t va = round_up(current->max_brk, PGSIZE);
       while (va <= new_brk) {
         _map(&current->as, (void *)va, new_page());
         va += PGSIZE;
       }
+
       current->max_brk = new_brk;
     }
     current->cur_brk = new_brk;

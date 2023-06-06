@@ -17,6 +17,12 @@ void _map(_Protect *p, void *va, void *pa);
 
 #define DEFAULT_ENTRY ((void *)0x8048000)
 
+// PA3.1 impl
+
+// uintptr_t loader(_Protect *as, const char *filename) {
+//   ramdisk_read(DEFAULT_ENTRY, 0, get_ramdisk_size());
+//   return (uintptr_t)DEFAULT_ENTRY;
+// }
 
 uintptr_t loader(_Protect *as, const char *filename) {
   int fd = fs_open(filename, 0, 0);

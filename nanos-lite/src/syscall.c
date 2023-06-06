@@ -10,19 +10,41 @@ int fs_close(int fd);
 int mm_brk(uint32_t new_brk);
 
 static _RegSet* sys_none(_RegSet* r) {
+  // do nothing here, just return 1
+  // Log("");
   SYSCALL_ARG1(r) = 1;
   return r;
 }
 
 static _RegSet* sys_exit(_RegSet* r) {
   uint32_t exit_code = SYSCALL_ARG2(r);
+  // Log("exit code = %d", exit_code);
   _halt(exit_code);
   return r;
 }
 
+// PA3.1 impl
+
+// static _RegSet* sys_write(_RegSet* r) {
+//   int fd = SYSCALL_ARG2(r);
+//   const char *buf = (const char *) SYSCALL_ARG3(r);
+//   int len = SYSCALL_ARG4(r);
+
+//   if (fd == 1 || fd == 2) {
+//     for (int i = 0; i < len; i++) {
+//       _putc(buf[i]);
+//     }
+//     SYSCALL_ARG1(r) = len;
+//   } else {
+//     SYSCALL_ARG1(r) = 0;
+//   }
+
+//   return r;
+// }
 
 static _RegSet* sys_brk(_RegSet* r) {
   intptr_t pos = SYSCALL_ARG2(r);
+  // Log("pos = %p", pos);
   SYSCALL_ARG1(r) = mm_brk(pos);
   return r;
 }
@@ -31,6 +53,7 @@ static _RegSet* sys_open(_RegSet* r) {
   const char *pathname = (const char *)SYSCALL_ARG2(r);
   int flags = SYSCALL_ARG3(r);
   int mode = SYSCALL_ARG4(r);
+  // Log("pathname = %s, flags = %x, mode = %x", pathname, flags, mode);
   SYSCALL_ARG1(r) = fs_open(pathname, flags, mode);
   return r;
 }
@@ -39,6 +62,7 @@ static _RegSet* sys_read(_RegSet* r) {
   int fd = SYSCALL_ARG2(r);
   char *buf = (char *)SYSCALL_ARG3(r);
   int len = SYSCALL_ARG4(r);
+  // Log("fd = %d, buf = %p, len = %d", fd, buf, len);
   SYSCALL_ARG1(r) = fs_read(fd, buf, len);
   return r;
 }
@@ -47,6 +71,7 @@ static _RegSet* sys_write(_RegSet* r) {
   int fd = SYSCALL_ARG2(r);
   const char *buf = (const char *)SYSCALL_ARG3(r);
   int len = SYSCALL_ARG4(r);
+  // Log("fd = %d, buf = %p, len = %d", fd, buf, len);
   SYSCALL_ARG1(r) = fs_write(fd, buf, len);
   return r;
 }
@@ -55,12 +80,14 @@ static _RegSet* sys_lseek(_RegSet* r) {
   int fd = SYSCALL_ARG2(r);
   off_t offset = SYSCALL_ARG3(r);
   int whence = SYSCALL_ARG4(r);
+  // Log("fd = %d, offset = %d, whence = %d", fd, offset, whence);
   SYSCALL_ARG1(r) = fs_lseek(fd, offset, whence);
   return r;
 }
 
 static _RegSet* sys_close(_RegSet* r) {
   int fd = SYSCALL_ARG2(r);
+  // Log("fd = %d", fd);
   SYSCALL_ARG1(r) = fs_close(fd);
   return r;
 }
