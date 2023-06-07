@@ -12,7 +12,6 @@ static const char *keyname[256] __attribute__((used)) = {
 
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
-extern int current_game;
 size_t events_read(void *buf, size_t len) {
   int ori_key_id = _read_key();
   int key_id = ori_key_id & (KEYDOWN_MASK - 1);
@@ -23,9 +22,6 @@ size_t events_read(void *buf, size_t len) {
     snprintf(buf, len, "t %d\n", _uptime());
   } else {
     snprintf(buf, len, "%s %s\n", is_down ? "kd" : "ku", keyname[key_id]);
-    if (key_id == _KEY_F12 && is_down) {
-      current_game = (~current_game) & 1;
-    }
   }
   return strlen(buf);
 }

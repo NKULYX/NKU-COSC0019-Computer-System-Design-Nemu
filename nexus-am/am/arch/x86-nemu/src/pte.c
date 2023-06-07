@@ -65,59 +65,12 @@ void _switch(_Protect *p) {
   set_cr3(p->ptr);
 }
 
-void print(const char *s) {
-  for (; *s; s ++) {
-    _putc(*s);
-  }
-}
-
-void printd(uint32_t v) {
-  if (v == 0) {
-    return;
-  }
-  printd(v >> 8);
-  char map[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-  _putc(map[(v>>4)&0xf]);
-  _putc(map[v&0xf]);
-}
-
 void _map(_Protect *p, void *va, void *pa) {
-  print("map va ");
-  printd((uint32_t)va);
-  print("\n");
-  PDE *ppde = (PDE *)p->ptr + PDX(va);
-  if (!(*ppde & PTE_P)) {
-    *ppde = (uint32_t)palloc_f() | PTE_P;
-  }
-
-  PTE *ppte = (PTE *)PTE_ADDR(*ppde) + PTX(va);
-  *ppte = PTE_ADDR(pa) | PTE_P;
 }
 
 void _unmap(_Protect *p, void *va) {
 }
 
-#define push(v) *(--ptr)=(v)
-
 _RegSet *_umake(_Protect *p, _Area ustack, _Area kstack, void *entry, char *const argv[], char *const envp[]) {
-  uint32_t *ptr = ustack.end;
-
-  // 8 general registers for '_start'
-  for (int i = 0; i < 8; i++) {
-    push(0);
-  }
-
-  // trap frame
-  push(0x202);            // eflags
-  push(0x8);              // cs
-  push((uint32_t) entry); // eip
-  push(0);                // error code
-  push(0x81);             // irq
-  // 8 general register in trap frame
-  for (int i = 0; i < 8; i++) {
-    push(0);
-  }
-
-  // write ptr to tf
-  return (_RegSet *)ptr;
+  return NULL;
 }
