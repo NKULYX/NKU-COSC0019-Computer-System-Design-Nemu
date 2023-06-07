@@ -28,15 +28,33 @@ void load_prog(const char *filename) {
 
 int current_game = 0;
 _RegSet* schedule(_RegSet *prev) {
+  if(current != NULL) {
+    current->tf = prev;
+  }
+  else{
+    current = &pcb[0];
+  }
+  static int pal_freq = 0;
+  if(current == &pcb[0]) {
+    pal_freq++;
+    if(pal_freq == 1000) {
+      current = &pcb[1];
+      pal_freq = 0;
+    }
+  }
+  else {
+    current->tf = prev;
+    current = &pcb[0];
+  }
   // save the context pointer
   // current->tf = prev;
 
-  // // always select pcb[0] as the new process
-  // // current = &pcb[0];
+  // always select pcb[0] as the new process
+  // current = &pcb[0];
   // current = (current == &pcb[0] ? &pcb[1 + current_game] : &pcb[0]);
 
-  // // switch to the new address space,
-  // // then return the new context
-  // _switch(&current->as);
+  // switch to the new address space,
+  // then return the new context
+  _switch(&current->as);
   return current->tf;
 }
