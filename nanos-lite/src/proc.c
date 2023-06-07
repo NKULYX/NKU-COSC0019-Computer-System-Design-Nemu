@@ -37,7 +37,7 @@ _RegSet* schedule(_RegSet *prev) {
   static int pal_freq = 0;
   if(current == &pcb[0]) {
     pal_freq++;
-    if(pal_freq == 1000) {
+    if(pal_freq == 3000) {
       current = &pcb[1];
       pal_freq = 0;
     }
