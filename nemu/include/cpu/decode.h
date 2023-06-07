@@ -74,7 +74,7 @@ extern DecodeInfo decoding;
 #define make_DHelper(name) void concat(decode_, name) (vaddr_t *eip)
 typedef void (*DHelper) (vaddr_t *);
 
-make_DHelper(I2E);
+make_DHelper(I2E); //声明了decode_I2E
 make_DHelper(I2a);
 make_DHelper(I2r);
 make_DHelper(SI2E);
@@ -82,7 +82,7 @@ make_DHelper(SI_E2G);
 make_DHelper(I_E2G);
 make_DHelper(I_G2E);
 make_DHelper(I);
-make_DHelper(r);
+make_DHelper(r);  //reg,即表中是个寄存器
 make_DHelper(E);
 make_DHelper(gp7_E);
 make_DHelper(test_I);

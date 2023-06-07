@@ -6,16 +6,17 @@ static _RegSet* (*H)(_Event, _RegSet*) = NULL;
 void vecsys();
 void vecnull();
 void vectrap();
-void vectimer();
+void vectime();
 
 _RegSet* irq_handle(_RegSet *tf) {
   _RegSet *next = tf;
+  
   if (H) {
     _Event ev;
     switch (tf->irq) {
       case 0x80: ev.event = _EVENT_SYSCALL; break;
       case 0x81: ev.event = _EVENT_TRAP; break;
-      case   32: ev.event = _EVENT_IRQ_TIME; break;
+      case 0x32: ev.event = _EVENT_IRQ_TIME; break;
       default: ev.event = _EVENT_ERROR; break;
     }
 
@@ -39,7 +40,7 @@ void _asye_init(_RegSet*(*h)(_Event, _RegSet*)) {
   // -------------------- system call --------------------------
   idt[0x80] = GATE(STS_TG32, KSEL(SEG_KCODE), vecsys, DPL_USER);
   idt[0x81] = GATE(STS_TG32, KSEL(SEG_KCODE), vectrap, DPL_USER);
-  idt[32] = GATE(STS_TG32, KSEL(SEG_KCODE), vectimer, DPL_USER);
+  idt[0x32] = GATE(STS_TG32, KSEL(SEG_KCODE), vectime, DPL_USER);
 
   set_idt(idt, sizeof(idt));
 
@@ -52,7 +53,7 @@ _RegSet *_make(_Area stack, void *entry, void *arg) {
 }
 
 void _trap() {
-  asm volatile("int $0x81");
+	asm volatile("int $0x81");
 }
 
 int _istatus(int enable) {

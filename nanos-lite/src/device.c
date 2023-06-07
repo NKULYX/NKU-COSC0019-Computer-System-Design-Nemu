@@ -1,7 +1,5 @@
 #include "common.h"
 
-#define KEYDOWN_MASK 0x8000
-
 #define NAME(key) \
   [_KEY_##key] = #key,
 
@@ -10,48 +8,44 @@ static const char *keyname[256] __attribute__((used)) = {
   _KEYS(NAME)
 };
 
-#define MIN(a, b) ((a)<(b)?(a):(b))
-
-extern int current_game;
-size_t events_read(void *buf, size_t len) {
-  int ori_key_id = _read_key();
-  int key_id = ori_key_id & (KEYDOWN_MASK - 1);
-  bool is_down = !!(ori_key_id & (KEYDOWN_MASK));
-  Log("key id = %d, is down = %d", key_id, is_down);
-
-  if (key_id == _KEY_NONE) {
-    snprintf(buf, len, "t %d\n", _uptime());
-  } else {
-    snprintf(buf, len, "%s %s\n", is_down ? "kd" : "ku", keyname[key_id]);
-    if (key_id == _KEY_F12 && is_down) {
-      current_game = (~current_game) & 1;
-    }
-  }
-  return strlen(buf);
-}
-
 static char dispinfo[128] __attribute__((used));
 
+int current_game = 0;
+size_t events_read(void *buf, size_t len) {
+  //return 0;
+	int key = _read_key();
+	bool down = false;
+	if (key & 0x8000) {
+		key ^= 0x8000;
+		down = true;
+	}
+	if (key == _KEY_NONE) {
+		unsigned long t = _uptime();
+		sprintf(buf, "t %d\n", t);
+	}
+	else {
+		sprintf(buf, "%s %s\n", down ? "kd" : "ku", keyname[key]);
+		if(key == 13 && down) { //F12 DOWN
+			current_game = (current_game == 0 ? 1 : 0);
+		}
+		Log("Get key: %d %s %s\n", key, keyname[key], down ? "down" : "up");
+	}
+	return strlen(buf);//xxx strlen(buf)-1
+}
+
 void dispinfo_read(void *buf, off_t offset, size_t len) {
-  memcpy(buf, dispinfo + offset, len);
+	memcpy(buf,dispinfo+offset,len);
 }
 
 void fb_write(const void *buf, off_t offset, size_t len) {
-  // _draw_rect(
-  //   (const uint32_t *) buf,
-  //   (offset / 4) % _screen.width,
-  //   (offset / 4) / _screen.width,
-  //   len / 4,
-  //   1
-  // );
-  memcpy((uint8_t *)_get_fb() + offset, buf, len);
+	int row = (offset/4)/_screen.width;
+	int col = (offset/4)%_screen.width;
+	_draw_rect(buf,col,row,len/4,1);
 }
 
 void init_device() {
   _ioe_init();
-
   // TODO: print the string to array `dispinfo` with the format
   // described in the Navy-apps convention
-  sprintf(dispinfo, "WIDTH:%d\nHEIGHT:%d\n", _screen.width, _screen.height);
-  Log("%s", dispinfo);
+  sprintf(dispinfo,"WIDTH:%d\nHEIGHT:%d\n",_screen.width,_screen.height);
 }

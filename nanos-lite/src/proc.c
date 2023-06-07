@@ -11,13 +11,11 @@ uintptr_t loader(_Protect *as, const char *filename);
 void load_prog(const char *filename) {
   int i = nr_proc ++;
   _protect(&pcb[i].as);
-
   uintptr_t entry = loader(&pcb[i].as, filename);
-
   // TODO: remove the following three lines after you have implemented _umake()
-  // _switch(&pcb[i].as);
-  // current = &pcb[i];
-  // ((void (*)(void))entry)();
+  //_switch(&pcb[i].as);
+  //current = &pcb[i];
+  //((void (*)(void))entry)();
 
   _Area stack;
   stack.start = pcb[i].stack;
@@ -26,35 +24,21 @@ void load_prog(const char *filename) {
   pcb[i].tf = _umake(&pcb[i].as, stack, stack, (void *)entry, NULL, NULL);
 }
 
-int current_game = 0;
+int count = 0;
+extern int current_game;
 _RegSet* schedule(_RegSet *prev) {
-  if(current != NULL) {
-    current->tf = prev;
-  }
-  else{
-    current = &pcb[0];
-  }
-  static int pal_freq = 0;
-  if(current == &pcb[0]) {
-    pal_freq++;
-    if(pal_freq == 10000) {
-      current = &pcb[1];
-      pal_freq = 0;
-    }
-  }
-  else {
-    current->tf = prev;
-    current = &pcb[0];
-  }
-  // save the context pointer
-  // current->tf = prev;
+  //save the context pointer
+  current->tf = prev;
 
-  // always select pcb[0] as the new process
-  // current = &pcb[0];
-  // current = (current == &pcb[0] ? &pcb[1 + current_game] : &pcb[0]);
+  current = (current_game == 0 ? &pcb[0] : &pcb[2]);
+  count++;
+  if(count == 64){
+  	count = 0;
+  	current = &pcb[1];
+  }
 
-  // switch to the new address space,
-  // then return the new context
+  //TODO: switch to the new address space,
+  //then return the new context
   _switch(&current->as);
   return current->tf;
 }

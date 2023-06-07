@@ -14,14 +14,14 @@ char* rl_gets() {
   static char *line_read = NULL;
 
   if (line_read) {
-    free(line_read);
+    free(line_read);//readline返回值由malloc分配,释放需要free
     line_read = NULL;
   }
 
   line_read = readline("(nemu) ");
 
   if (line_read && *line_read) {
-    add_history(line_read);
+    add_history(line_read);//行编辑的一常用功能 历史记录
   }
 
   return line_read;
@@ -36,144 +36,40 @@ static int cmd_q(char *args) {
   return -1;
 }
 
-static int cmd_si(char *args) {
-  if (!args) {
-    cpu_exec(1);
-    return 0;
-  }
-
-  int v;
-  int ret = sscanf(args, "%d", &v);
-  if (ret != 1) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-
-  cpu_exec(v);
-  return 0;
-}
-
-static int cmd_info(char *args) {
-  if (!args) {
-    printf("need param\n");
-    return 0;
-  }
-  switch (*args) {
-    case 'r':
-      for (int i = 0; i < 4; i++) {
-        printf("%4s = 0x%08x    %4s = 0x%08x\n",
-            regsl[i], reg_l(i), regsl[i + 4], reg_l(i + 4));
-      }
-      printf("%4s = 0x%08x\n", "eip", cpu.eip);
-      printf("\n");
-      break;
-    case 'w':
-      for(WP *wp = wp_head(); wp; wp = wp->next) {
-        printf("%2d: %s\n", wp->NO, wp->expr);
-      }
-      break;
-    default:
-      printf("invalid param '%s'\n", args);
-      break;
-  }
-  return 0;
-}
-
-static int cmd_p(char *args) {
-  bool valid;
-  int result = expr(args, &valid);
-  if (!valid) {
-    printf("invalid expression\n");
-    return 0;
-  }
-  printf("%d\n"
-         "0x%08x\n", result, result);
-  return 0;
-}
-
-static int cmd_x(char *args) {
-  int n;
-  if (sscanf(args, "%d", &n) != 1) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-
-  char *p = strchr(args, ' ');
-  if (!p || !p[1]) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-
-  bool valid;
-  int addr = expr(p + 1, &valid);
-  if (!valid) {
-    printf("invalid expression\n");
-    return 0;
-  }
-  addr &= ~0xF;
-
-  int cnt = 0;
-  for (int i = 0; i < (n + 3) / 4; i++) {
-    printf ("0x%08x : ", addr + i * 0x10);
-    for (int j = 0; j < 4 && cnt < n; j++) {
-      printf("%08x  ", vaddr_read(addr + cnt++, 4));
-    }
-    printf("\n");
-  }
-  return 0;
-}
-
-static int cmd_w(char *args) {
-  if (!args) {
-    printf("need param\n");
-    return 0;
-  }
-  WP *alloc = new_wp();
-  strcpy(alloc->expr, args);
-  return 0;
-}
-
-static int cmd_d(char *args) {
-  int delete_ID;
-  if (sscanf(args, "%d", &delete_ID) != 1) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-  for(WP *wp = wp_head(); wp; wp = wp->next) {
-    if (wp->NO == delete_ID) {
-      free_wp(wp);
-      return 0;
-    }
-  }
-  printf("invalid ID: %d\n", delete_ID);
-  return 0;
-}
-
 static int cmd_help(char *args);
-
+static int cmd_si(char *args);
+static int cmd_info(char *args);
+static int cmd_x(char *args);
+static int cmd_p(char *args);
+static int cmd_w(char *args);
+static int cmd_d(char *args);
+static int cmd_de(char *args);
+static int cmd_at(char *args);
 static struct {
   char *name;
   char *description;
-  int (*handler) (char *);
+  int (*m_handler) (char *);  //函数指针 返回值(新类型)(参数列表)
 } cmd_table [] = {
   { "help", "Display informations about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
+  { "si", "Step N steps", cmd_si },
+  { "info", "Print regs' or watchpoint's state", cmd_info },
+  { "x", "Scan the mem", cmd_x },
+  { "p", "Expression evaluation", cmd_p },
+  { "w", "Set watchpoint", cmd_w },
+  { "d", "Delete watchpoint", cmd_d },
+  { "detach", "detach DUT", cmd_de },
+  { "attach", "attach DUT", cmd_at },
   /* TODO: Add more commands */
-  { "si", "Single step", cmd_si },
-  { "info", "Show nemu states", cmd_info },
-  { "p", "Evaluate an expression", cmd_p },
-  { "x", "Memory inspection", cmd_x },
-  { "w", "Add a watchpoint", cmd_w },
-  { "d", "Delete a watchpoint", cmd_d },
+
 };
 
-#define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0]))
+#define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0])) //长度
 
 static int cmd_help(char *args) {
   /* extract the first argument */
-  char *arg = strtok(NULL, " ");
+  char *arg = strtok(NULL, " ");  //同一个字符串，第二次要用NULL
   int i;
 
   if (arg == NULL) {
@@ -194,6 +90,131 @@ static int cmd_help(char *args) {
   return 0;
 }
 
+
+static int cmd_si(char *args) {
+    int step;
+    char *arg = strtok(NULL, " ");
+    if (arg == NULL)
+        step=1;
+    else
+        step=atoi(arg); //atoi atof sscanf
+    cpu_exec(step);
+    return 0;
+}
+static int cmd_info(char *args) {
+    char *subcmd[] = {"r","w"};
+    int SUBCMD_SIZE = 2;
+    int i;
+
+    char *arg = strtok(NULL, " ");
+    if (arg != NULL){
+        for(i=0;i<SUBCMD_SIZE;i++)
+            if(strcmp(arg,subcmd[i]) == 0){
+                if(i == 0)
+                {
+                    int j;
+                    for(j=0;j<8;j++)
+                        printf("%s\t\t0x%08x\n",regsl[j],cpu.gpr[j]._32);
+                    for(j=0;j<8;j++) 
+                        printf("%s\t\t0x%04x\n",regsw[j],cpu.gpr[j]._16);
+                    for(j=0;j<8;j++) 
+                        printf("%s\t\t0x%02x\n",regsb[j],cpu.gpr[j%4]._8[j/4]);
+                }
+                else if(i == 1) //w
+                {
+                    show_wp();
+                }
+                return 0;
+            }
+        printf("Unknown command '%s'\n", arg);
+        return 0;
+    }
+    printf("Lack of parameter!\n");
+    return 0;
+
+}
+static int cmd_x(char *args) {
+    int N;
+    char* expr0;
+
+    char *arg = strtok(NULL, " ");
+    if(arg == NULL)
+    {
+        printf("Lack of parameter!\n");
+        return 0;
+    }
+    N = atoi(arg);
+    if(N==0){
+        printf("Unknown command '%s'\n",arg);
+        return 0;  //N=0时可能不是数字
+    }
+    //printf("%d\n",N);
+
+    expr0 = strtok(NULL, " ");
+    if(expr0 == NULL)
+    {
+        printf("Lack of parameter!\n");
+        return 0;
+    }
+    //printf("%s\n",expr);
+
+    bool *success=false;
+    vaddr_t addr = expr(expr0,success);
+    for(int i=0;i<N;i++)
+    {
+        printf("0x%08x:\t0x%08x\n",addr,vaddr_read(addr,4));
+        addr = addr+4;
+    }
+    return 0;
+}
+
+static int cmd_p(char *args) {
+    bool *success=false;
+    // char *arg = strtok(NULL, " "); //参数只有一个，这个参数里可能有空格
+    if(args == NULL)
+    {
+        printf("Lack of parameter!\n");
+        return 0;
+    }
+    uint32_t res =  expr(args,success);
+    printf("10进制：%d\n",res);
+    printf("16进制：0x%08x\n",res);
+    return 0;
+}
+static int cmd_w(char *args) {
+    if(args == NULL)
+    {
+        printf("Lack of parameter!\n");
+        return 0;
+    }
+    bool *success = false;
+    WP* nwp =  new_wp();
+    strcpy(nwp->eexpr,args);
+    nwp->init = expr(args,success);
+    printf("Set watchpoint %d on %s\n",nwp->NO,args);
+    return 0;
+}
+static int cmd_d(char *args) {
+    if(args == NULL)
+    {
+        printf("Lack of parameter!\n");
+        return 0;
+    }
+    int N;
+    sscanf(args,"%d",&N);
+    free_wp(N);
+    printf("Free watchpoint %d\n",N);
+    return 0;
+}
+static int cmd_de(char *args) {
+
+    return 0;
+}
+static int cmd_at(char *args) {
+
+    return 0;
+}
+
 void ui_mainloop(int is_batch_mode) {
   if (is_batch_mode) {
     cmd_c(NULL);
@@ -202,7 +223,7 @@ void ui_mainloop(int is_batch_mode) {
 
   while (1) {
     char *str = rl_gets();
-    char *str_end = str + strlen(str);
+    char *str_end = str + strlen(str);//指针指向末尾'\0'
 
     /* extract the first token as the command */
     char *cmd = strtok(str, " ");
@@ -211,7 +232,7 @@ void ui_mainloop(int is_batch_mode) {
     /* treat the remaining string as the arguments,
      * which may need further parsing
      */
-    char *args = cmd + strlen(cmd) + 1;
+    char *args = cmd + strlen(cmd) + 1;//指针指向命令剩余部分的开头
     if (args >= str_end) {
       args = NULL;
     }
@@ -224,7 +245,7 @@ void ui_mainloop(int is_batch_mode) {
     int i;
     for (i = 0; i < NR_CMD; i ++) {
       if (strcmp(cmd, cmd_table[i].name) == 0) {
-        if (cmd_table[i].handler(args) < 0) { return; }
+        if (cmd_table[i].m_handler(args) < 0) { return; } //用于 q 退出
         break;
       }
     }

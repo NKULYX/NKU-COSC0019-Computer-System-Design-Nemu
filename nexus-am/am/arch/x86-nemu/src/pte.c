@@ -65,59 +65,41 @@ void _switch(_Protect *p) {
   set_cr3(p->ptr);
 }
 
-void print(const char *s) {
-  for (; *s; s ++) {
-    _putc(*s);
-  }
-}
-
-void printd(uint32_t v) {
-  if (v == 0) {
-    return;
-  }
-  printd(v >> 8);
-  char map[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-  _putc(map[(v>>4)&0xf]);
-  _putc(map[v&0xf]);
-}
-
 void _map(_Protect *p, void *va, void *pa) {
-  print("map va ");
-  printd((uint32_t)va);
-  print("\n");
-  PDE *ppde = (PDE *)p->ptr + PDX(va);
-  if (!(*ppde & PTE_P)) {
-    *ppde = (uint32_t)palloc_f() | PTE_P;
-  }
-
-  PTE *ppte = (PTE *)PTE_ADDR(*ppde) + PTX(va);
-  *ppte = PTE_ADDR(pa) | PTE_P;
+	PDE *pgdir = p->ptr;
+	PDE *pde = &pgdir[PDX(va)];
+	PTE *pgtab;
+	if (*pde & PTE_P) { //present
+		pgtab = (PTE *)PTE_ADDR(*pde);
+	} else {
+		//映射过程中发现需要申请新的页表
+		pgtab = (PTE *)palloc_f();
+		*pde = PTE_ADDR(pgtab) | PTE_P;
+	}
+	pgtab[PTX(va)] = PTE_ADDR(pa) | PTE_P;
 }
 
 void _unmap(_Protect *p, void *va) {
 }
 
-#define push(v) *(--ptr)=(v)
-
 _RegSet *_umake(_Protect *p, _Area ustack, _Area kstack, void *entry, char *const argv[], char *const envp[]) {
+  //_umake将ustack底部初始化一个entry为返回地址的陷阱帧
   uint32_t *ptr = ustack.end;
-
-  // 8 general registers for '_start'
+  //navyapps程序入口函数_start的 栈帧，即8个通用寄存器
   for (int i = 0; i < 8; i++) {
-    push(0);
+	*ptr = 0x0; 
+  	 ptr--;
   }
-
-  // trap frame
-  push(0x202);            // eflags
-  push(0x8);              // cs
-  push((uint32_t) entry); // eip
-  push(0);                // error code
-  push(0x81);             // irq
-  // 8 general register in trap frame
+  //陷阱帧，包括栈帧的8个通用寄存器
+  *ptr = 0x202; 	  ptr--; //eflags,即IF置1即可
+  *ptr = 0x8; 	          ptr--; //cs 为了diff test
+  *ptr = (uint32_t)entry; ptr--; //eip
+  *ptr = 0x0;             ptr--; //error code
+  *ptr = 0x81;            ptr--; //irq id
   for (int i = 0; i < 8; i++) {
-    push(0);
+	*ptr = 0x0;
+  	 ptr--;
   }
-
-  // write ptr to tf
-  return (_RegSet *)ptr;
+  ptr++;
+  return (_RegSet *)ptr; //将会记录到tf
 }
