@@ -9,8 +9,7 @@ void _ioe_init() {
 }
 
 unsigned long _uptime() {
-  //return 0;
-  return inl(RTC_PORT)-boot_time;
+  return inl(RTC_PORT) - boot_time;
 }
 
 uint32_t* const fb = (uint32_t *)0x40000;
@@ -23,25 +22,31 @@ _Screen _screen = {
 extern void* memcpy(void *, const void *, int);
 
 void _draw_rect(const uint32_t *pixels, int x, int y, int w, int h) {
-   /*int i;
-   for (i = 0; i < _screen.width * _screen.height; i++) {
-     fb[i] = i;
-   }*/
-  // pixels指定的像素颜色 填充到（x，y）到（x+w，y+h)上
-  int i;
-  for(i=0;i<h;i++)
-      memcpy(fb+(y+i)*_screen.width+x,pixels+i*w,w*4);
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      if (x + i < 0 || x + i >= _screen.width ||
+          y + j < 0 || y + j >= _screen.height) {
+        continue;
+      }
+      fb[(y + j) * _screen.width + (x + i)] = pixels[j * w + i];
+    }
+  }
+}
+
+uint32_t *_get_fb() {
+  return fb;
 }
 
 void _draw_sync() {
 }
 
+#define I8042_DATA_PORT 0x60
+#define I8042_STATUS_PORT 0x64
+#define I8042_STATUS_HASKEY_MASK 0x1
+
 int _read_key() {
-    uint32_t code = _KEY_NONE;
-    if(inb(0x64) & 0x1)
-        code = inl(0x60);
-    //if(inb(I8042_STATUS_PORT) & I8042_STATUS_HASKEY_MASK)
-    //    code = inl(I8042_DATA_PORT);
-    // return _KEY_NONE;
-    return code;
+  if (inb(I8042_STATUS_PORT) & I8042_STATUS_HASKEY_MASK) {
+    return inl(I8042_DATA_PORT);
+  }
+  return _KEY_NONE;
 }

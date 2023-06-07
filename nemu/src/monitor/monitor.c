@@ -75,23 +75,26 @@ static inline void load_img() {
   }
 
 #ifdef DIFF_TEST
-  //宏定义DIFF_TEST后执行代码 客户程序拷贝一份到qemu
   gdb_memcpy_to_qemu(ENTRY_START, guest_to_host(ENTRY_START), size);
 #endif
 }
 
 static inline void restart() {
+  // see i386 manual '10.1 Processor State After Reset'
+
   /* Set the initial instruction pointer. */
   cpu.eip = ENTRY_START;
 
-  //eflags 设置初值
-  cpu.eflags.val = 0x00000002;
-  //cs 设置初值
-  cpu.cs = 0x00000008;
-  //cr0 设置初值
+  // reset eflags register
+  cpu.eflags.val = 0x2;
+
+  // reset cs register
+  cpu.cs = 8;
+
+  // reset control register
   cpu.cr0.val = 0x60000011;
+
 #ifdef DIFF_TEST
-  //设置到和nemu相同
   init_qemu_reg();
 #endif
 }

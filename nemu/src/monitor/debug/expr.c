@@ -1,17 +1,14 @@
 #include "nemu.h"
 
+#if 0
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
  */
 #include <sys/types.h>
 #include <regex.h>
 
-enum {  //从256开始,为了避开ascii
-  TK_NOTYPE = 256, TK_HEX, TK_DEC, TK_REG, TK_EQ, TK_NEQ, 
-  TK_AND, TK_OR,
-  TK_NEG,      //-代表负数
-  TK_POI,       //指针解引用
-  TK_LS, TK_RS, TK_BOE, TK_LOE
+enum {
+  TK_NOTYPE = 256, TK_EQ
 
   /* TODO: Add more token types */
 
@@ -27,33 +24,8 @@ static struct rule {
    */
 
   {" +", TK_NOTYPE},    // spaces
-  {"0x[0-9A-Fa-f][0-9A-Fa-f]*", TK_HEX},
-  {"0|[1-9][0-9]*", TK_DEC},
-  {"\\$(eax|ecx|edx|ebx|esp|ebp|esi|edi|eip|ax|cx|dx|bx|sp|bp|si|di|al|cl|dl|bl|ah|ch|dh|bh)", TK_REG},
-
-  {"\\+", '+'},         // 使用单引号
-  {"-", '-'},          
-  {"\\*", '*'},
-  {"\\/", '/'},
-
-  {"\\(", '('},
-  {"\\)", ')'},
-  
-  {"==", TK_EQ},         
-  {"!=", TK_NEQ},
-
-  {"&&", TK_AND},
-  {"\\|\\|", TK_OR},
-  {"!", '!'},
-  // 注意前缀问题 >=识别应在>前面 
-  // 类似的 十进制和十六进制位置
-  {"<<", TK_LS},
-  {">>", TK_RS},
-  {">=", TK_BOE},
-  {">", '>'},
-  {"<=", TK_LOE},
-  {"<", '<'}
-
+  {"\\+", '+'},         // plus
+  {"==", TK_EQ}         // equal
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]) )
@@ -79,11 +51,11 @@ void init_regex() {
 
 typedef struct token {
   int type;
-  char str[32];  
+  char str[32];
 } Token;
 
 Token tokens[32];
-int nr_token; //已识别出的token数目
+int nr_token;
 
 static bool make_token(char *e) {
   int position = 0;
@@ -99,24 +71,18 @@ static bool make_token(char *e) {
         char *substr_start = e + position;
         int substr_len = pmatch.rm_eo;
 
-        //Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
-        //    i, rules[i].regex, position, substr_len, substr_len, substr_start);  //%.*s两个参数宽度+串，指定宽度 强制输出
+        Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
+            i, rules[i].regex, position, substr_len, substr_len, substr_start);
         position += substr_len;
 
         /* TODO: Now a new token is recognized with rules[i]. Add codes
          * to record the token in the array `tokens'. For certain types
          * of tokens, some extra actions should be performed.
          */
-        if(rules[i].token_type == TK_NOTYPE) //空格直接舍弃
-            break;
-        if(substr_len>31)  //str溢出 false报错
-            assert(0);
-        memset(tokens[nr_token].str,'\0',32); //以防万一
-        strncpy(tokens[nr_token].str, substr_start, substr_len);// 类似上面的%.*s
 
-        tokens[nr_token].type = rules[i].token_type;
-        // Log("Save in type=%d, str=%s",tokens[nr_token].type,tokens[nr_token].str);
-        nr_token = nr_token + 1;
+        switch (rules[i].token_type) {
+          default: TODO();
+        }
 
         break;
       }
@@ -130,152 +96,396 @@ static bool make_token(char *e) {
 
   return true;
 }
-bool check_parentheses(int p,int q){
-    if((tokens[p].str[0]=='(') && (tokens[q].str[0]==')')){
-        //左括号记为1 右括号记为-1 
-        //总和应该为0 且遍历完之前总和一定不为0，以确保最左和最右匹配
-        int count = 0;
-        for(int i=p;i<q;i++) //前n-1个数总和应不为0
-        {
-            if(tokens[i].str[0] == '(')
-                count = count + 1;
-            if(tokens[i].str[0] == ')')
-                count = count - 1;
-            if(count == 0)
-            {
-                //printf("Leftmost and rightmost are not matched\n");
-                return false;
-            }
-        }
-        count = count -1; //最后一个右括号
-        if(count !=0) //总和应该为0
-        {
-            printf("Bad parentheses\n");
-            assert(0);
-        }
-        return true;
-    }
-    else
-    {
-        // printf("The whole expr was not surrounded\n");
-        return false;
-    }
-}
-uint32_t eval(int p,int q){
-    if(p>q){   //3+缺省为3+0 --1缺省为0--1
-        // printf("Bad expression\n");
-        return 0;
-        // assert(0);
-    }
-    else if(p==q){
-        uint32_t res;
-        if(tokens[p].type == TK_HEX) sscanf(tokens[p].str,"%x",&res);
-        else if(tokens[p].type == TK_DEC) sscanf(tokens[p].str,"%d",&res);
-        else if(tokens[p].type == TK_REG){
-            char tmp[3] = {tokens[p].str[1],tokens[p].str[2],tokens[p].str[3]};
-            for(int i=0;i<8;i++)
-                if(!strcmp(tmp,regsl[i])){return cpu.gpr[i]._32;}
-            for(int i=0;i<8;i++)
-                if(!strcmp(tmp,regsw[i])){return cpu.gpr[i]._16;}
-            for(int i=0;i<8;i++) 
-                if(!strcmp(tmp,regsb[i])){return cpu.gpr[i%4]._8[i/4];}
-	    char teip[3]="eip";
-	    if(strcmp(tmp,teip))return cpu.eip;
-        }
-        else assert(0);
-        return res;
-    }
-    else if(check_parentheses(p,q) == true){
-        return eval(p+1,q-1);
-    }
-    else{
-        int op=0;
-        int op_type=0;
-        bool left = false;//出现左括号的flag
-        int curr_prev = 100;//当前存的符号优先级
-        for(int i=p;i<=q;i++){  //此处为p～q而不是0～q-p
-            if(tokens[i].str[0]==')')
-            {
-                left = false;
-                continue;
-            }
-            if(left)
-                continue;
-            if(tokens[i].str[0]=='(')
-            {
-                left = true;
-                continue;
-            }
-            switch(tokens[i].type){
-                case TK_OR:if(curr_prev>1){curr_prev=1;op=i;op_type=TK_OR;continue;}
-                case TK_AND:if(curr_prev>2){curr_prev=2;op=i;op_type=TK_AND;continue;}
-                case TK_NEQ:if(curr_prev>3){curr_prev=3;op=i;op_type=TK_NEQ;continue;}
-                case TK_EQ:if(curr_prev>3){curr_prev=3;op=i;op_type=TK_EQ;continue;}
-                case TK_LOE:if(curr_prev>4){curr_prev=4;op=i;op_type=TK_LOE;continue;}
-                case TK_BOE:if(curr_prev>4){curr_prev=4;op=i;op_type=TK_BOE;continue;}
-                case '<':if(curr_prev>4){curr_prev=4;op=i;op_type='<';continue;}
-                case '>':if(curr_prev>4){curr_prev=4;op=i;op_type='>';continue;}
-                case TK_RS:if(curr_prev>5){curr_prev=5;op=i;op_type=TK_RS;continue;}
-                case TK_LS:if(curr_prev>5){curr_prev=5;op=i;op_type=TK_LS;continue;}
-                case '+':if(curr_prev>6){curr_prev=6;op=i;op_type='+';continue;}
-                case '-':if(curr_prev>6){curr_prev=6;op=i;op_type='-';continue;}
-                case '*':if(curr_prev>7){curr_prev=7;op=i;op_type='*';continue;}
-                case '/':if(curr_prev>7){curr_prev=7;op=i;op_type='/';continue;}
-                case '!':if(curr_prev>8){curr_prev=8;op=i;op_type='!';continue;}
-                case TK_NEG:if(curr_prev>9){curr_prev=9;op=i;op_type=TK_NEG;continue;}
-                case TK_POI:if(curr_prev>9){curr_prev=9;op=i;op_type=TK_POI;continue;}
-                default:continue;
-            }
-        }
 
-        uint32_t val1 = eval(p,op-1);
-        uint32_t val2 = eval(op+1,q);
-        switch(op_type){
-            case TK_OR:return val1||val2;
-            case TK_AND:return val1&&val2;
-            case TK_NEQ:return val1!=val2;
-            case TK_EQ:return val1==val2;
-            case TK_LOE:return val1<=val2;
-            case TK_BOE:return val1>=val2;
-            case '<':return val1<val2;
-            case '>':return val1>val2;
-            case TK_RS:return val1>>val2;
-            case TK_LS:return val1<<val2;
-            case '+':return val1+val2;
-            case '-':return val1-val2;
-            case '*':return val1*val2;
-            case '/':return val1/val2;
-            case '!':return !val2;
-            case TK_NEG:return -1*val2; 
-            case TK_POI:return vaddr_read(val2,4);
-            default:assert(0);
-        }
-    }
-}
 uint32_t expr(char *e, bool *success) {
   if (!make_token(e)) {
     *success = false;
     return 0;
   }
 
-  if(nr_token!=1)  //只有一个符号时没必要区分
-    for(int i=0;i<nr_token;i++)  //负号的判断 当其为第一个符号，或左边为(时,或按照讲义左边可能为负号(--1)
-        if(tokens[i].type == '-' &&(i==0||tokens[i-1].type == '('||tokens[i-1].type == TK_NEG
-                                                                 ||tokens[i-1].type == '-'
-                                                                 ||tokens[i-1].type == '+'
-                                                                 ||tokens[i-1].type == '*'
-                                                                 ||tokens[i-1].type == '/'))
-            tokens[i].type = TK_NEG;
- // if(nr_token!=1)
-      for(int i=0;i<nr_token;i++)
-          if(tokens[i].type == '*' &&(i==0||(tokens[i-1].type!=TK_DEC && tokens[i-1].type!=TK_HEX && tokens[i-1].type!=')')))
-              tokens[i].type = TK_POI;
-
-  //*success = true;
   /* TODO: Insert codes to evaluate the expression. */
-  // TODO();  //什么鬼
-  //
-  //printf("RESULT=%d\n",eval(0, nr_token-1));
+  TODO();
 
-  return eval(0, nr_token-1);
+  return 0;
 }
+#endif // if 0
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+
+static int isspace(int v) {
+  return v == ' ' || v == '\t';
+}
+
+static int isnumber(int v) {
+  return v >= '0' && v <= '9';
+}
+
+static int isalpha(int v) {
+  return (v >= 'a' && v <= 'z') ||
+         (v >= 'A' && v <= 'Z');
+}
+
+typedef struct {
+  const char *buffer;
+  size_t idx;
+} ParserCtx;
+
+static ParserCtx ctx;
+
+static void next() {
+  while (isspace(ctx.buffer[++ctx.idx]));
+}
+
+static void nexti(int i) {
+  while (i--) {
+    next();
+  }
+}
+
+static char chr() {
+  return ctx.buffer[ctx.idx];
+}
+
+static const char *pchr() {
+  return ctx.buffer + ctx.idx;
+}
+
+typedef struct {
+  int32_t value;
+  uint8_t valid;
+} Option;
+
+static Option option() {
+  return (Option) {0, 0};
+}
+
+static Option make_value(int32_t v) {
+  return (Option) {v, 1};
+}
+
+static Option oadd(Option a, Option b) {
+  Option result;
+  result.value = a.value + b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option osub(Option a, Option b) {
+  Option result;
+  result.value = a.value - b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option omul(Option a, Option b) {
+  Option result;
+  result.value = a.value * b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option odiv(Option a, Option b) {
+  // sanity check
+  if (b.value == 0) {
+    return option();
+  }
+  Option result;
+  result.value = a.value / b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option onot(Option v) {
+  v.value = !v.value;
+  return v;
+}
+
+static Option olt(Option a, Option b) {
+  Option result;
+  result.value = a.value < b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option ogt(Option a, Option b) {
+  Option result;
+  result.value = a.value > b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option ole(Option a, Option b) {
+  Option result;
+  result.value = a.value <= b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oge(Option a, Option b) {
+  Option result;
+  result.value = a.value >= b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oeq(Option a, Option b) {
+  Option result;
+  result.value = a.value == b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option one(Option a, Option b) {
+  Option result;
+  result.value = a.value != b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oand(Option a, Option b) {
+  Option result;
+  result.value = a.value && b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option oor(Option a, Option b) {
+  Option result;
+  result.value = a.value || b.value;
+  result.valid = a.valid && b.valid;
+  return result;
+}
+
+static Option lor_expr();
+
+static Option land_expr();
+
+static Option eq_expr();
+
+static Option rel_expr();
+
+static Option add_expr();
+
+static Option mul_expr();
+
+static Option factor();
+
+static Option number();
+
+static Option variable();
+
+static Option dereference(Option p);
+
+static Option lor_expr() {
+  Option result = land_expr();
+  while (chr() == '|' && pchr()[1] == '|') {
+    nexti(2);
+    result = oor(result, land_expr());
+  }
+  return result;
+}
+
+static Option land_expr() {
+  Option result = eq_expr();
+  while (chr() == '&' && pchr()[1] == '&') {
+    nexti(2);
+    result = oand(result, eq_expr());
+  }
+  return result;
+}
+
+static Option eq_expr() {
+  Option result = rel_expr();
+  while ((chr() == '=' || chr() == '!') && pchr()[1] == '=') {
+    switch (chr()) {
+      case '=':
+        nexti(2);
+        result = oeq(result, rel_expr());
+        break;
+      case '!':
+        nexti(2);
+        result = one(result, rel_expr());
+        break;
+    }
+  }
+  return result;
+}
+
+static Option rel_expr() {
+  Option result = add_expr();
+  while (chr() == '<' || chr() == '>') {
+    switch (chr()) {
+      case '<':
+        if (pchr()[1] == '=') {
+          nexti(2);
+          result = ole(result, add_expr());
+        } else {
+          next();
+          result = olt(result, add_expr());
+        }
+        break;
+      case '>':
+        if (pchr()[1] == '=') {
+          nexti(2);
+          result = oge(result, add_expr());
+        } else {
+          next();
+          result = ogt(result, add_expr());
+        }
+        break;
+    }
+  }
+  return result;
+}
+
+static Option add_expr() {
+  Option result = mul_expr();
+  while (chr() == '+' || chr() == '-') {
+    switch (chr()) {
+      case '+':
+        next();
+        result = oadd(result, mul_expr());
+        break;
+      case '-':
+        next();
+        result = osub(result, mul_expr());
+        break;
+    }
+  }
+  return result;
+}
+
+static Option mul_expr() {
+  Option result = factor();
+  while (chr() == '*' || chr() == '/') {
+    switch (chr()) {
+      case '*':
+        next();
+        result = omul(result, factor());
+        break;
+      case '/':
+        next();
+        result = odiv(result, factor());
+        break;
+    }
+  }
+  return result;
+}
+
+static Option factor() {
+  switch (chr()) {
+    case '+':
+      next();
+      return factor();
+    case '-':
+      next();
+      return osub(make_value(0), factor());
+    case '!':
+      next();
+      return onot(factor());
+    case '*':
+      next();
+      return dereference(factor());
+  }
+
+  if (chr() == '(') {
+    next();
+    Option result = lor_expr();
+    if (chr() != ')') {
+      return option();
+    }
+    next();
+    return result;
+  } else if (isnumber(chr())) {
+    return number();
+  } else if (chr() == '$') {
+    return variable();
+  }
+  return option();
+}
+
+static Option number() {
+  int32_t result = 0;
+  int32_t factor;
+  if (chr() == '0' && pchr()[1] == 'x') {
+    nexti(2);
+    factor = 16;
+  } else if (chr() == '0' && pchr()[1] == 'b') {
+    nexti(2);
+    factor = 2;
+  } else if (chr() == '0') {
+    next();
+    factor = 8;
+  } else {
+    factor = 10;
+  }
+
+  while ((chr() >= '0' && chr() <= '9') ||
+         (chr() >= 'a' && chr() <= 'f') ||
+         (chr() >= 'A' && chr() <= 'F')) {
+    int32_t v = chr();
+    next();
+
+    if (v >= 'a' && v <= 'f') {
+      v = v - 'a' + 10;
+    } else if (v >= 'A' && v <= 'F') {
+      v = v - 'A' + 10;
+    } else {
+      v = v - '0';
+    }
+    result = result * factor + v;
+  }
+  return make_value(result);
+}
+
+static Option variable() {
+  if (chr() != '$') {
+    return option();
+  }
+  next();
+
+  char buf[64];
+  int32_t i = 0;
+
+  while (isalpha(chr()) && i < 64) {
+    buf[i++] = chr();
+    next();
+  }
+  buf[i] = '\0';
+
+  for (int i = 0; i < 8; i++) {
+    if (strcmp(buf, regsl[i]) == 0) {
+      return make_value(reg_l(i));
+    }
+    if (strcmp(buf, regsw[i]) == 0) {
+      return make_value(reg_w(i));
+    }
+    if (strcmp(buf, regsb[i]) == 0) {
+      return make_value(reg_b(i));
+    }
+  }
+  if (strcmp(buf, "eip") == 0) {
+    return make_value(cpu.eip);
+  }
+  return option();
+}
+
+static Option dereference(Option p) {
+  if (!p.valid) {
+    return option();
+  }
+  return make_value(vaddr_read(p.value, 4));
+}
+
+uint32_t expr(char *e, bool *success) {
+  ctx.buffer = e;
+  ctx.idx = 0;
+  Option opt = lor_expr();
+  *success = opt.valid;
+  return opt.value;
+}
+
+// dummy function
+void init_regex() {}

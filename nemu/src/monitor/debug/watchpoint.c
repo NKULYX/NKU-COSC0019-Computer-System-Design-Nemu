@@ -19,83 +19,40 @@ void init_wp_pool() {
 }
 
 /* TODO: Implement the functionality of watchpoint */
-WP* new_wp(){
-    if(head == NULL){
-        head = free_;
-        free_=free_->next;
-        head->next = NULL;
-        return head;
-    }
-    else{
-        if(free_ == NULL) //没有空闲的了
-            assert(0);
-        WP* tmp = head;
-        while(tmp->next!=NULL){
-            tmp = tmp->next;
-        }
-        tmp->next = free_;
-        free_ = free_->next;
-        tmp = tmp->next;
-        tmp->next = NULL;
-        return tmp;
-    }
+
+WP* new_wp() {
+  assert(free_ != NULL);
+  WP *alloc = free_;
+  free_ = free_->next;
+  alloc->next = head;
+  head = alloc;
+
+  alloc->has_prev = false;
+  alloc->prev_value = 0;
+  alloc->expr[0] = '\0';
+  return alloc;
 }
-void free_wp(int N){
-    WP *wp=head;
-    while(wp!=NULL)
-    {
-        if(wp->NO == N)
-            break;
-        wp = wp->next;
+
+void free_wp(WP *wp) {
+  bool found = false;
+  WP *prev = NULL;
+  for(WP *p = head; p; prev = p, p = p->next) {
+    if (p == wp) {
+      found = true;
+      break;
     }
-    if(wp == NULL)
-    {
-        printf("Fail to "); //fail to free wp
-        return;
-    }
-    if(head == wp)
-        head = head->next;
-    else
-    {
-        WP* tmp = head;
-        while(tmp!=NULL)
-        {
-            if(tmp->next == wp){
-                tmp->next = wp->next;
-                break;
-            }
-            tmp = tmp->next;
-        }
-    }
-    wp->next = free_;
-    free_ = wp;
+  }
+  assert(found);
+  if (!prev) {
+    head = wp->next;
+  } else {
+    prev->next = wp->next;
+  }
+
+  wp->next = free_;
+  free_ = wp;
 }
-void show_wp(){
-    printf("Num\tWhat\n");
-    WP *tmp = head;
-    while(tmp!=NULL)
-    {
-        printf("%d\t%s\n",tmp->NO,tmp->eexpr);
-        tmp = tmp->next;
-    }
-}
-bool check_wp(){  //监视点里某个变动了，返回true
-    WP *tmp = head;
-    bool had_changed = false;
-    while(tmp!=NULL)
-    {
-        bool *success = false;
-        uint32_t new_val = expr(tmp->eexpr,success); 
-        if(new_val != tmp->init)
-        {
-            printf("Watchpoint %d: %s\n",tmp->NO,tmp->eexpr);
-            printf("Old value = 0x%08x\nNew value = 0x%08x\n",tmp->init,new_val);
-            tmp->init = new_val;//赋上新值
-            had_changed = true; //每一个监视点的变化都要输出
-        }
-        tmp = tmp->next;
-    }
-    if(had_changed)
-        return true;
-    return false;
+
+WP *wp_head() {
+  return head;
 }
