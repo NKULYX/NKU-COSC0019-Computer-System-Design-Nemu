@@ -101,7 +101,7 @@ make_EHelper(shld) {
   print_asm_template3(shld);
 }
 
-make_EHelper(shrl) {
+make_EHelper(shrd) {
   rtl_shr(&t0, &id_dest->val, &id_src->val);
   rtl_li(&t2, id_src2->width);
   rtl_shli(&t2, &t2, 3);
