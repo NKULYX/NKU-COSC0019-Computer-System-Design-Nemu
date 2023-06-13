@@ -20,8 +20,17 @@ FLOAT F_mul_F(FLOAT a, FLOAT b) {
 }
 
 FLOAT F_div_F(FLOAT a, FLOAT b) {
-  int64_t x = ((int64_t) a) << 16;
-  int ans = ((int) (x / b));
+  int64_t x = __scale(a) << 16;
+  int64_t y = __scale(b);
+  int64_t ans = 0;
+  for(int i = 31; i >= 0; i--) {
+    int64_t t = y * (1 << i);
+    if(t <= x) {
+      x -= t;
+      ans += (1 << i);
+    }
+  }
+  ans *= ((__sign(a) ^ __sign(b)) ? -1 : 1);
   return ans;
 }
 
