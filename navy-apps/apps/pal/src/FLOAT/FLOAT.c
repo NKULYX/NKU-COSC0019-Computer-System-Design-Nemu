@@ -2,36 +2,33 @@
 #include <stdint.h>
 #include <assert.h>
 
-typedef union {
-  struct {
-    uint32_t m : 23;
-    uint32_t e : 8;
-    uint32_t s : 1;
-  };
-  uint32_t val;
-} Float;
-
-#define __sign(x) ((x) & 0x80000000)
-#define __scale(x) (__sign(x) ? -(x) : (x))
-
 FLOAT F_mul_F(FLOAT a, FLOAT b) {
-  int64_t scale = ((int64_t)a * (int64_t)b) >> 16;
-  return scale;
+  //assert(0);
+  //return 0;
+  return ((int64_t)a * (int64_t)b) >> 16;
 }
 
 FLOAT F_div_F(FLOAT a, FLOAT b) {
-  int64_t x = __scale(a) << 16;
-  int64_t y = __scale(b);
-  int64_t ans = 0;
-  for(int i = 31; i >= 0; i--) {
-    int64_t t = y * (1 << i);
-    if(t <= x) {
-      x -= t;
-      ans += (1 << i);
+  //assert(0);
+  //return 0;
+  assert(b != 0);
+  FLOAT x = Fabs(a);
+  FLOAT y = Fabs(b);
+  FLOAT ret = x / y;
+  x = x % y;
+
+  for (int i = 0; i < 16; i++) {
+    x <<= 1;
+    ret <<= 1;
+    if (x >= y) {
+      x -= y;
+      ret++;
     }
   }
-  ans *= ((__sign(a) ^ __sign(b)) ? -1 : 1);
-  return ans;
+  if (((a ^ b) & 0x80000000) == 0x80000000) {
+    ret = -ret;
+  }
+  return ret;
 }
 
 FLOAT f2F(float a) {
@@ -45,24 +42,42 @@ FLOAT f2F(float a) {
    * performing arithmetic operations on it directly?
    */
 
-  Float f;
-  void * tmp = &a;
-  f.val = *(uint32_t *) tmp;
-  uint32_t m = f.m | (1 << 23);
-  int shift = 134 - (int) f.e;
-  if ( shift < 0 ) {
-    m <<= (-shift);
-  } 
-  else {
-    m >>= shift;
+  //assert(0);
+  //return 0;
+  union float_ {
+    struct {
+      uint32_t man : 23;
+      uint32_t exp : 8;
+      uint32_t sign : 1;
+    };
+    uint32_t val;
+  };
+  union float_ f;
+  f.val = *((uint32_t*)(void*)&a);
+  int exp = f.exp - 127;
+  FLOAT ret = 0;
+  if (exp == 128)
+    assert(0);
+  if (exp >= 0) {
+    int mov = 7 - exp;
+    if (mov >= 0)
+      ret = (f.man | (1 << 23)) >> mov;
+    else
+      ret = (f.man | (1 << 23)) << (-mov);
   }
-  return (__sign(f.val) ? -m : m);
+  else
+    return 0;
+  return f.sign == 0 ? ret : -ret;
 }
 
 FLOAT Fabs(FLOAT a) {
-  return __scale(a);
+  //assert(0);
+  //return 0;
+  if ((a & 0x80000000) == 0)
+    return a;
+  else
+    return -a;
 }
-
 /* Functions below are already implemented */
 
 FLOAT Fsqrt(FLOAT x) {
