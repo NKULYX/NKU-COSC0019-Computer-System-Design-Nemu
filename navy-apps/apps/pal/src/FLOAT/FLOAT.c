@@ -2,6 +2,15 @@
 #include <stdint.h>
 #include <assert.h>
 
+  union float_ {
+    struct {
+      uint32_t man : 23;
+      uint32_t exp : 8;
+      uint32_t sign : 1;
+    };
+    uint32_t val;
+  };
+
 FLOAT F_mul_F(FLOAT a, FLOAT b) {
   //assert(0);
   //return 0;
@@ -42,16 +51,6 @@ FLOAT f2F(float a) {
    * performing arithmetic operations on it directly?
    */
 
-  //assert(0);
-  //return 0;
-  union float_ {
-    struct {
-      uint32_t man : 23;
-      uint32_t exp : 8;
-      uint32_t sign : 1;
-    };
-    uint32_t val;
-  };
   union float_ f;
   f.val = *((uint32_t*)(void*)&a);
   int exp = f.exp - 127;
