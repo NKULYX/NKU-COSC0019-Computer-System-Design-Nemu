@@ -1,106 +1,88 @@
 #include "cpu/exec.h"
 
-make_EHelper(add) {
-  rtl_add(&t2, &id_dest->val, &id_src->val);
-  rtl_sltu(&t3, &t2, &id_dest->val);
+make_EHelper(add) {  // 写法同sub
+  rtl_add(&t2, &id_dest->val, &id_src->val);  // 加法结果存在t2中
   operand_write(id_dest, &t2);
-
   rtl_update_ZFSF(&t2, id_dest->width);
-
-  rtl_sltu(&t0, &t2, &id_dest->val);
-  rtl_or(&t0, &t3, &t0);
-  rtl_set_CF(&t0);
-
-  rtl_xor(&t0, &id_dest->val, &id_src->val);
-  rtl_not(&t0);
+  
+  rtl_sltu(&t0,&t2,&id_dest->val);  
+  rtl_set_CF(&t0);  // 是否发生进/借位
+  
+  rtl_xor(&t0, &id_src->val,&t2);
   rtl_xor(&t1, &id_dest->val, &t2);
   rtl_and(&t0, &t0, &t1);
   rtl_msb(&t0, &t0, id_dest->width);
-  rtl_set_OF(&t0);
+  rtl_set_OF(&t0);  // 运算结果是否溢出
 
   print_asm_template2(add);
 }
 
-make_EHelper(sub) {
-  rtl_sub(&t2, &id_dest->val, &id_src->val);
-  rtl_sltu(&t3, &id_dest->val, &t2);
+make_EHelper(sub) {  // 仿照下面的sbb来写
+  rtl_sub(&t2, &id_dest->val, &id_src->val);  // 减法结果存在t2中
+  rtl_sltu(&t3, &id_dest->val, &t2);    // 目标操作数和t2的比大小结果存在t3中
   operand_write(id_dest, &t2);
-
   rtl_update_ZFSF(&t2, id_dest->width);
-
-  rtl_sltu(&t0, &id_dest->val, &t2);
+  
+  rtl_sltu(&t0, &id_dest->val, &t2);  
   rtl_or(&t0, &t3, &t0);
-  rtl_set_CF(&t0);
-
+  rtl_set_CF(&t0);  // 是否发生进/借位
+  
   rtl_xor(&t0, &id_dest->val, &id_src->val);
   rtl_xor(&t1, &id_dest->val, &t2);
   rtl_and(&t0, &t0, &t1);
   rtl_msb(&t0, &t0, id_dest->width);
-  rtl_set_OF(&t0);
+  rtl_set_OF(&t0);  // 运算结果是否溢出
+  
 
   print_asm_template2(sub);
 }
 
-make_EHelper(cmp) {
-  rtl_sub(&t2, &id_dest->val, &id_src->val);
-  rtl_sltu(&t3, &id_dest->val, &t2);
-
+make_EHelper(cmp) {  // 写法同sub，但不存储结果，只修改标志寄存器
+  rtl_sub(&t2, &id_dest->val, &id_src->val);  // 减法结果存在t2中
+  rtl_sltu(&t3, &id_dest->val, &t2);    // 目标操作数和t2的比大小结果存在t3中
   rtl_update_ZFSF(&t2, id_dest->width);
-
-  rtl_set_CF(&t3);
-
+  
+  rtl_set_CF(&t3);  // 是否发生进/借位
+  
   rtl_xor(&t0, &id_dest->val, &id_src->val);
   rtl_xor(&t1, &id_dest->val, &t2);
   rtl_and(&t0, &t0, &t1);
   rtl_msb(&t0, &t0, id_dest->width);
-  rtl_set_OF(&t0);
+  rtl_set_OF(&t0);   // 运算结果是否溢出
 
   print_asm_template2(cmp);
 }
 
-make_EHelper(inc) {
-  rtl_addi(&t3, &tzero, 1);
-  rtl_addi(&t2, &id_dest->val, 1);
-  operand_write(id_dest, &t2);
+make_EHelper(inc) {  // 自增1；不用对CF置位
+  rtl_addi(&t1, &id_dest->val, 1);
+  operand_write(id_dest, &t1);
 
-  rtl_update_ZFSF(&t2, id_dest->width);
-
-  rtl_xor(&t0, &id_dest->val, &t3);
-  rtl_not(&t0);
-  rtl_xor(&t1, &id_dest->val, &t2);
-  rtl_and(&t0, &t0, &t1);
-  rtl_msb(&t0, &t0, id_dest->width);
+  rtl_update_ZFSF(&t1, id_dest->width);
+  rtl_eqi(&t0, &t1, 0x80000000);
   rtl_set_OF(&t0);
 
   print_asm_template1(inc);
 }
 
-make_EHelper(dec) {
-  rtl_addi(&t3, &tzero, 1);
-  rtl_subi(&t2, &id_dest->val, 1);
-  operand_write(id_dest, &t2);
+make_EHelper(dec) {  // 自减1；不用对CF置位
+  rtl_subi(&t1, &id_dest->val, 1);
+  operand_write(id_dest, &t1);
 
-  rtl_update_ZFSF(&t2, id_dest->width);
-
-  rtl_xor(&t0, &id_dest->val, &t3);
-  rtl_xor(&t1, &id_dest->val, &t2);
-  rtl_and(&t0, &t0, &t1);
-  rtl_msb(&t0, &t0, id_dest->width);
+  rtl_update_ZFSF(&t1, id_dest->width);
+  rtl_eqi(&t0, &t1, 0x7fffffff);
   rtl_set_OF(&t0);
 
   print_asm_template1(dec);
 }
 
-make_EHelper(neg) {
-  rtl_eq0(&t2, &id_dest->val);
-  rtl_set_CF(&t2);
-
-  rtl_sub(&t2, &tzero, &id_dest->val);
-  operand_write(id_dest, &t2);
-
-  rtl_update_ZFSF(&t2, id_dest->width);
-
-  rtl_xor(&t0, &id_dest->val, &tzero);
+make_EHelper(neg) {  // 相当于求原二进制数的补
+  if(!id_dest->val)rtl_set_CF(&tzero);
+  else{rtl_addi(&t0,&tzero,1);rtl_set_CF(&t0);}
+  rtl_add(&t0,&tzero,&id_dest->val);
+  t0 = -1 * t0;
+  operand_write(id_dest,&t0);
+  rtl_update_ZFSF(&t0, id_dest->width); 
+  rtl_xor(&t0, &id_dest->val, &id_src->val);
   rtl_xor(&t1, &id_dest->val, &t2);
   rtl_and(&t0, &t0, &t1);
   rtl_msb(&t0, &t0, id_dest->width);

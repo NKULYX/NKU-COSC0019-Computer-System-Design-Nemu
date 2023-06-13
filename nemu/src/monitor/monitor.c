@@ -80,19 +80,12 @@ static inline void load_img() {
 }
 
 static inline void restart() {
-  // see i386 manual '10.1 Processor State After Reset'
-
   /* Set the initial instruction pointer. */
   cpu.eip = ENTRY_START;
-
-  // reset eflags register
-  cpu.eflags.val = 0x2;
-
-  // reset cs register
-  cpu.cs = 8;
-
-  // reset control register
-  cpu.cr0.val = 0x60000011;
+  
+  cpu.eflags.val=0x00000002;  // eflags³õÖµÎª0x00000002H
+  cpu.cs=8;
+  cpu.CR0=0x60000011;
 
 #ifdef DIFF_TEST
   init_qemu_reg();

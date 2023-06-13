@@ -38,12 +38,10 @@ static inline make_DopHelper(SI) {
    *
    op->simm = ???
    */
+  uint32_t t = instr_fetch(eip,op->width);
+  rtl_sext(&t, &t, op->width);  // 需要进行符号扩展！
+  op->simm = (int32_t)t;  // 指令中的立即数存到simm中
 
-  op->simm = instr_fetch(eip, op->width);
-  // only do sext when width == 1
-  if (op->width == 1) {
-    op->simm = (int8_t)op->simm;
-  }
   rtl_li(&op->val, op->simm);
 
 #ifdef DEBUG
@@ -306,6 +304,15 @@ make_DHelper(out_a2dx) {
 #ifdef DEBUG
   sprintf(id_dest->str, "(%%dx)");
 #endif
+}
+
+make_DHelper(mov_load_cr){
+  decode_op_rm(eip,id_dest,false,id_src,false);
+  rtl_load_cr(&id_src->val,id_src->reg); // 寄存器内容读入src
+}
+
+make_DHelper(mov_store_cr){
+  decode_op_rm(eip,id_src,true,id_dest,false);
 }
 
 void operand_write(Operand *op, rtlreg_t* src) {

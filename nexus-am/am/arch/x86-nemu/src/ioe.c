@@ -8,8 +8,8 @@ void _ioe_init() {
   boot_time = inl(RTC_PORT);
 }
 
-unsigned long _uptime() {
-  return inl(RTC_PORT) - boot_time;
+unsigned long _uptime() {  // 当前时间减去初始时间
+  return inl(RTC_PORT)-boot_time;
 }
 
 uint32_t* const fb = (uint32_t *)0x40000;
@@ -22,31 +22,18 @@ _Screen _screen = {
 extern void* memcpy(void *, const void *, int);
 
 void _draw_rect(const uint32_t *pixels, int x, int y, int w, int h) {
-  for (int i = 0; i < w; i++) {
-    for (int j = 0; j < h; j++) {
-      if (x + i < 0 || x + i >= _screen.width ||
-          y + j < 0 || y + j >= _screen.height) {
-        continue;
-      }
-      fb[(y + j) * _screen.width + (x + i)] = pixels[j * w + i];
-    }
-  }
-}
-
-uint32_t *_get_fb() {
-  return fb;
+  int i;
+  for(i=0;i<h;i++)  // 像素填空(x,y)-(x+w,y+h)的空间，一次一行
+    memcpy(fb+(y+i)*_screen.width+x,pixels+i*w,w*4);
+  
 }
 
 void _draw_sync() {
 }
 
-#define I8042_DATA_PORT 0x60
-#define I8042_STATUS_PORT 0x64
-#define I8042_STATUS_HASKEY_MASK 0x1
-
 int _read_key() {
-  if (inb(I8042_STATUS_PORT) & I8042_STATUS_HASKEY_MASK) {
-    return inl(I8042_DATA_PORT);
+  if(inb(0x64) & 0x1){  // 状态寄存器为1，返回数据寄存器中的值
+    return inl(0x60);
   }
   return _KEY_NONE;
 }

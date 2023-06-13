@@ -26,35 +26,23 @@ void load_prog(const char *filename) {
   pcb[i].tf = _umake(&pcb[i].as, stack, stack, (void *)entry, NULL, NULL);
 }
 
-int current_game = 0;
+// ÉÏÏÂÎÄÇÐ»»
+int count = 0;
+int current_game=0;
+
+void game_change(){
+  current_game= 2-current_game;
+}
+
 _RegSet* schedule(_RegSet *prev) {
-  if(current != NULL) {
-    current->tf = prev;
+  count++;
+  current->tf = prev;
+  current = &pcb[current_game];
+  
+  if(count==1200){
+    current = &pcb[1];
+    count=0;
   }
-  else{
-    current = &pcb[0];
-  }
-  static int pal_freq = 0;
-  if(current == &pcb[0]) {
-    pal_freq++;
-    if(pal_freq == 10000) {
-      current = &pcb[1];
-      pal_freq = 0;
-    }
-  }
-  else {
-    current->tf = prev;
-    current = &pcb[0];
-  }
-  // save the context pointer
-  // current->tf = prev;
-
-  // always select pcb[0] as the new process
-  // current = &pcb[0];
-  // current = (current == &pcb[0] ? &pcb[1 + current_game] : &pcb[0]);
-
-  // switch to the new address space,
-  // then return the new context
   _switch(&current->as);
   return current->tf;
 }

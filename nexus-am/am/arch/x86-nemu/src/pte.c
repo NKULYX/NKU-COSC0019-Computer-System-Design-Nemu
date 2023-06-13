@@ -7,6 +7,8 @@ static PTE kptabs[PMEM_SIZE / PGSIZE] PG_ALIGN;
 static void* (*palloc_f)();
 static void (*pfree_f)(void*);
 
+extern void *memcpy(void *,const void*,int);
+
 _Area segments[] = {      // Kernel memory mappings
   {.start = (void*)0,          .end = (void*)PMEM_SIZE}
 };
@@ -65,59 +67,41 @@ void _switch(_Protect *p) {
   set_cr3(p->ptr);
 }
 
-void print(const char *s) {
-  for (; *s; s ++) {
-    _putc(*s);
-  }
-}
-
-void printd(uint32_t v) {
-  if (v == 0) {
-    return;
-  }
-  printd(v >> 8);
-  char map[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-  _putc(map[(v>>4)&0xf]);
-  _putc(map[v&0xf]);
-}
-
+// 虚拟空间映射到物理空间
 void _map(_Protect *p, void *va, void *pa) {
-  print("map va ");
-  printd((uint32_t)va);
-  print("\n");
-  PDE *ppde = (PDE *)p->ptr + PDX(va);
-  if (!(*ppde & PTE_P)) {
-    *ppde = (uint32_t)palloc_f() | PTE_P;
-  }
+  PDE *pgdir=(PDE*)p->ptr; // 页目录表基址
+  PTE *pgtab=NULL; // 页表基址
 
-  PTE *ppte = (PTE *)PTE_ADDR(*ppde) + PTX(va);
-  *ppte = PTE_ADDR(pa) | PTE_P;
+  PDE *pde = pde=pgdir+PDX(va); 
+  if(!(*pde&PTE_P)){ // 没有对应页表
+    pgtab=(PTE*)(palloc_f()); // 进行申请
+    *pde=(uintptr_t)pgtab|PTE_P; // 进行映射
+  } 
+  
+  pgtab=(PTE*)PTE_ADDR(*pde);
+  PTE *pte=pgtab+PTX(va);
+  *pte=(uintptr_t)pa|PTE_P; // 进行映射
 }
 
 void _unmap(_Protect *p, void *va) {
 }
 
-#define push(v) *(--ptr)=(v)
-
+// 参数入栈->初始化陷阱帧->返回陷阱帧指针
 _RegSet *_umake(_Protect *p, _Area ustack, _Area kstack, void *entry, char *const argv[], char *const envp[]) {
-  uint32_t *ptr = ustack.end;
-
-  // 8 general registers for '_start'
-  for (int i = 0; i < 8; i++) {
-    push(0);
-  }
-
-  // trap frame
-  push(0x202);            // eflags
-  push(0x8);              // cs
-  push((uint32_t) entry); // eip
-  push(0);                // error code
-  push(0x81);             // irq
-  // 8 general register in trap frame
-  for (int i = 0; i < 8; i++) {
-    push(0);
-  }
-
-  // write ptr to tf
-  return (_RegSet *)ptr;
+  // 参数入栈，实际上并不会用到这些参数，设为0或NULL
+  int arg1=0;
+  char *arg2=NULL;
+  memcpy((void*)ustack.end-4,(void*)arg2,4);
+  memcpy((void*)ustack.end-8,(void*)arg2,4);
+  memcpy((void*)ustack.end-12,(void*)arg1,4);
+  memcpy((void*)ustack.end-16,(void*)arg1,4);
+  
+  // 初始化陷阱帧
+  _RegSet tf;
+  tf.cs=8;
+  tf.eflags=0x202;
+  tf.eip=(uintptr_t)entry; // 返回地址
+  void *tf_addr=(void*)(ustack.end-16-sizeof(tf));
+  memcpy(tf_addr,(void*)&tf,sizeof(tf));
+  return (_RegSet*)tf_addr;
 }

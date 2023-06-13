@@ -36,120 +36,81 @@ static int cmd_q(char *args) {
   return -1;
 }
 
-static int cmd_si(char *args) {
-  if (!args) {
-    cpu_exec(1);
-    return 0;
-  }
-
-  int v;
-  int ret = sscanf(args, "%d", &v);
-  if (ret != 1) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-
-  cpu_exec(v);
-  return 0;
-}
-
-static int cmd_info(char *args) {
-  if (!args) {
-    printf("need param\n");
-    return 0;
-  }
-  switch (*args) {
-    case 'r':
-      for (int i = 0; i < 4; i++) {
-        printf("%4s = 0x%08x    %4s = 0x%08x\n",
-            regsl[i], reg_l(i), regsl[i + 4], reg_l(i + 4));
-      }
-      printf("%4s = 0x%08x\n", "eip", cpu.eip);
-      printf("\n");
-      break;
-    case 'w':
-      for(WP *wp = wp_head(); wp; wp = wp->next) {
-        printf("%2d: %s\n", wp->NO, wp->expr);
-      }
-      break;
-    default:
-      printf("invalid param '%s'\n", args);
-      break;
-  }
-  return 0;
-}
-
-static int cmd_p(char *args) {
-  bool valid;
-  int result = expr(args, &valid);
-  if (!valid) {
-    printf("invalid expression\n");
-    return 0;
-  }
-  printf("%d\n"
-         "0x%08x\n", result, result);
-  return 0;
-}
-
-static int cmd_x(char *args) {
-  int n;
-  if (sscanf(args, "%d", &n) != 1) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-
-  char *p = strchr(args, ' ');
-  if (!p || !p[1]) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-
-  bool valid;
-  int addr = expr(p + 1, &valid);
-  if (!valid) {
-    printf("invalid expression\n");
-    return 0;
-  }
-  addr &= ~0xF;
-
-  int cnt = 0;
-  for (int i = 0; i < (n + 3) / 4; i++) {
-    printf ("0x%08x : ", addr + i * 0x10);
-    for (int j = 0; j < 4 && cnt < n; j++) {
-      printf("%08x  ", vaddr_read(addr + cnt++, 4));
-    }
-    printf("\n");
-  }
-  return 0;
-}
-
-static int cmd_w(char *args) {
-  if (!args) {
-    printf("need param\n");
-    return 0;
-  }
-  WP *alloc = new_wp();
-  strcpy(alloc->expr, args);
-  return 0;
-}
-
-static int cmd_d(char *args) {
-  int delete_ID;
-  if (sscanf(args, "%d", &delete_ID) != 1) {
-    printf("invalid param '%s'\n", args);
-    return 0;
-  }
-  for(WP *wp = wp_head(); wp; wp = wp->next) {
-    if (wp->NO == delete_ID) {
-      free_wp(wp);
-      return 0;
-    }
-  }
-  printf("invalid ID: %d\n", delete_ID);
-  return 0;
-}
-
 static int cmd_help(char *args);
+
+static int cmd_si(char *args){
+  uint64_t steps=1; //默认为1
+  if(args==NULL){;}
+  else{
+    sscanf(args,"%llu",&steps);	//格式转换
+  }
+  cpu_exec(steps);
+  return 0;
+}
+
+static int cmd_info(char *args){
+  char op;
+  if(args==NULL){;}
+  else{
+    sscanf(args,"%c",&op);
+    if(op=='r'){  //打印寄存器状态
+      printf("eip: 0x%x\n", cpu.eip); //eip
+      for(int i=0;i<8;i++)
+        printf("%s: 0x%x\n",regsl[i],reg_l(i)); //32位寄存器名称+当前存储的值
+      for(int i=0;i<8;i++)
+        printf("%s: 0x%x\n",regsw[i],reg_w(i)); //16位寄存器名称+当前存储的值
+      for(int i=0;i<8;i++)
+        printf("%s: 0x%x\n",regsb[i],reg_b(i)); //8位寄存器名称+当前存储的值
+      printf("CR0: 0x%x\n", cpu.CR0); //CR0
+      printf("CR3: 0x%x\n", cpu.CR3); //CR3
+    }
+    if(op=='w')show_wp();  // 打印监视点状态
+  }
+  return 0;
+}
+
+static int cmd_x(char *args){
+  int len;
+  vaddr_t st;
+  char *c;
+  len = strtoul(args,&c,10); // N存入len，EXPR存入&c
+  bool succ;
+  st=expr(c+1,&succ);
+  printf("Memory:\n");
+  for(int i=0;i<len;i++){
+    printf("0x%08x: ",st);  //打印地址
+    uint32_t data =vaddr_read(st,4);
+    printf("0x%08x\n",data); //打印数据
+    st+=4;
+  }
+  return 0;
+}
+
+static int cmd_p(char *args){
+  bool succ=1;
+  int res=expr(args,&succ);
+  if(succ==0)printf("求值失败！\n");
+  else printf("%d\n",res);
+  return 0;
+}
+
+static int cmd_w(char *args){
+  bool succ=1;
+  WP *wp=new_wp();
+  strcpy(wp->exprv,args);
+  wp->value=expr(args,&succ);
+  if(succ==0)printf("求值失败！\n");
+  printf("已将%d号监视点设置于%s\n",wp->NO,args);
+  return 0;
+}
+
+static int cmd_d(char *args){
+  int no;
+  sscanf(args,"%d",&no);
+  free_wp(no);
+  printf("释放%d号监视点\n",no);
+  return 0;
+}
 
 static struct {
   char *name;
@@ -159,14 +120,14 @@ static struct {
   { "help", "Display informations about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
+  { "si", "si [N] 单步执行N条指令", cmd_si},
+  { "info", "info r 打印寄存器状态", cmd_info},
+  { "x", "x N EXPR 从EXPR开始输出N个四字节数据", cmd_x},
+  { "p", "p EXPR 求出表达式EXPR的值", cmd_p},
+  { "w", "w EXPR 当EXPR的值发生变化时，暂停程序", cmd_w},
+  { "d", "d N 删除N号监视点", cmd_d},
   /* TODO: Add more commands */
-  { "si", "Single step", cmd_si },
-  { "info", "Show nemu states", cmd_info },
-  { "p", "Evaluate an expression", cmd_p },
-  { "x", "Memory inspection", cmd_x },
-  { "w", "Add a watchpoint", cmd_w },
-  { "d", "Delete a watchpoint", cmd_d },
+
 };
 
 #define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0]))

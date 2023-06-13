@@ -1,46 +1,30 @@
 #include "common.h"
 
-#define min(a, b) ((a)<(b)?(a):(b))
+#define DEFAULT_ENTRY ((void *)0x8048000)
+extern size_t get_ramdisk_size();
+extern void ramdisk_read(void *, off_t, size_t);
+extern void* new_page(void);
 
-void ramdisk_read(void *buf, off_t offset, size_t len);
-size_t get_ramdisk_size();
-
+int fs_open(const char* path, int flags, int mode);
 size_t fs_filesz(int fd);
-int fs_open(const char *pathname, int flags, int mod);
-ssize_t fs_read(int fd, void *buf, size_t len);
-ssize_t fs_write(int fd, const void *buf, size_t len);
-off_t fs_lseek(int fd, off_t offset, int whence);
+ssize_t fs_read(int fd, void* buf, size_t len);
 int fs_close(int fd);
 
-void* new_page(void);
-void _map(_Protect *p, void *va, void *pa);
-
-#define DEFAULT_ENTRY ((void *)0x8048000)
-
-// PA3.1 impl
-
-// uintptr_t loader(_Protect *as, const char *filename) {
-//   ramdisk_read(DEFAULT_ENTRY, 0, get_ramdisk_size());
-//   return (uintptr_t)DEFAULT_ENTRY;
-// }
-
+// 打开文件->读到内存->关闭文件
 uintptr_t loader(_Protect *as, const char *filename) {
-  int fd = fs_open(filename, 0, 0);
-  assert(fd >= 0);
-
-  int size = fs_filesz(fd);
-
-  void *pa = NULL;
-  void *va = DEFAULT_ENTRY;
-  while (size >= 0) {
+  int fd=fs_open(filename,0,0);
+  Log("filename=%s,fd=%d",filename,fd);
+  int f_size = fs_filesz(fd);
+  fs_close(fd);
+  void* pa = DEFAULT_ENTRY;
+  void* va = DEFAULT_ENTRY;
+  while(f_size > 0){  // 不断地申请物理页，建立映射，读物理页
     pa = new_page();
     _map(as, va, pa);
     fs_read(fd, pa, PGSIZE);
-
     va += PGSIZE;
-    size -= PGSIZE;
+    f_size -= PGSIZE;
   }
   fs_close(fd);
-
   return (uintptr_t)DEFAULT_ENTRY;
 }

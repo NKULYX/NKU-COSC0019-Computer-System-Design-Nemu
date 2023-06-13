@@ -113,10 +113,10 @@ static inline void rtl_sr(int r, int width, const rtlreg_t* src1) {
 
 #define make_rtl_setget_eflags(f) \
   static inline void concat(rtl_set_, f) (const rtlreg_t* src) { \
-    cpu.eflags.f = *src; \
+    cpu.eflags.f=*src; \
   } \
   static inline void concat(rtl_get_, f) (rtlreg_t* dest) { \
-    *dest = cpu.eflags.f; \
+    *dest=cpu.eflags.f; \
   }
 
 make_rtl_setget_eflags(CF)
@@ -126,81 +126,98 @@ make_rtl_setget_eflags(SF)
 
 static inline void rtl_mv(rtlreg_t* dest, const rtlreg_t *src1) {
   // dest <- src1
-  *dest = *src1;
+  *dest=*src1;
 }
 
 static inline void rtl_not(rtlreg_t* dest) {
   // dest <- ~dest
-  *dest = ~(*dest);
+  *dest=~(*dest);
 }
 
-static inline void rtl_sext(rtlreg_t* dest, const rtlreg_t* src1, int width) {
+static inline void rtl_sext(rtlreg_t* dest, const rtlreg_t* src1, int width) {  // ·ûºÅÀ©Õ¹
   // dest <- signext(src1[(width * 8 - 1) .. 0])
-  switch (width) {
-    case 4: *dest = (int32_t)*src1; return;
-    case 1: *dest = (int8_t)*src1;  return;
-    case 2: *dest = (int16_t)*src1; return;
-    default: assert(0);
-  }
+  rtl_shli(dest, src1, (4 - width) * 8);  // ÏÈÂß¼­×óÒÆ
+  rtl_sari(dest, dest, (4 - width) * 8);  // ÔÙËãÊõÓÒÒÆ
 }
 
 static inline void rtl_push(const rtlreg_t* src1) {
   // esp <- esp - 4
+  cpu.esp-=4;
   // M[esp] <- src1
-  cpu.esp -= 4;
-  rtl_sm(&cpu.esp, 4, src1);
+  rtl_sm(&cpu.esp,4,src1);
 }
 
 static inline void rtl_pop(rtlreg_t* dest) {
   // dest <- M[esp]
+  rtl_lm(dest,&cpu.esp,4);
   // esp <- esp + 4
-  rtl_lm(dest, &cpu.esp, 4);
-  cpu.esp += 4;
+  cpu.esp+=4;
+
 }
 
 static inline void rtl_eq0(rtlreg_t* dest, const rtlreg_t* src1) {
   // dest <- (src1 == 0 ? 1 : 0)
-  *dest = (*src1 == 0);
+  *dest=*src1==0?1:0;
 }
 
 static inline void rtl_eqi(rtlreg_t* dest, const rtlreg_t* src1, int imm) {
   // dest <- (src1 == imm ? 1 : 0)
-  *dest = (*src1 == imm);
+  *dest=*src1==imm?1:0;
 }
 
 static inline void rtl_neq0(rtlreg_t* dest, const rtlreg_t* src1) {
   // dest <- (src1 != 0 ? 1 : 0)
-  *dest = (*src1 != 0);
+  *dest=*src1!=0?1:0;
 }
 
-static inline void rtl_msb(rtlreg_t* dest, const rtlreg_t* src1, int width) {
+static inline void rtl_msb(rtlreg_t* dest, const rtlreg_t* src1, int width) {  // ·µ»Ø·ûºÅÎ»
   // dest <- src1[width * 8 - 1]
-  *dest = (*src1 >> (width * 8 - 1)) & 1;
+  *dest=((*src1)>>(width*8-1))&0x1;
 }
 
-static inline void rtl_update_ZF(const rtlreg_t* result, int width) {
+static inline void rtl_update_ZF(const rtlreg_t* result, int width) {  
   // eflags.ZF <- is_zero(result[width * 8 - 1 .. 0])
-  switch (width) {
-    case 4: cpu.eflags.ZF = (*result & 0xFFFFFFFF) == 0; return;
-    case 1: cpu.eflags.ZF = (*result & 0x000000FF) == 0; return;
-    case 2: cpu.eflags.ZF = (*result & 0x0000FFFF) == 0; return;
-    default: assert(0);
+  int res=0;
+  switch(width){
+    case 1:
+      res=*result&0x000000ff;
+      break;
+    case 2:
+      res=*result&0x0000ffff;
+      break;
+    case 4:
+      res=*result&0xffffffff;
+      break;
   }
+  cpu.eflags.ZF=res==0?1:0;
 }
 
 static inline void rtl_update_SF(const rtlreg_t* result, int width) {
   // eflags.SF <- is_sign(result[width * 8 - 1 .. 0])
-  switch (width) {
-    case 4: cpu.eflags.SF = (*result & 0x80000000) != 0; return;
-    case 1: cpu.eflags.SF = (*result & 0x00000080) != 0; return;
-    case 2: cpu.eflags.SF = (*result & 0x00008000) != 0; return;
-    default: assert(0);
-  }
+  cpu.eflags.SF=((*result)>>(width*8-1))&0x1;
 }
 
 static inline void rtl_update_ZFSF(const rtlreg_t* result, int width) {
   rtl_update_ZF(result, width);
   rtl_update_SF(result, width);
+}
+
+// ¶ÁÈ¡¼Ä´æÆ÷ÄÚÈİ
+static inline void rtl_load_cr(rtlreg_t* dest,int r){
+  switch (r){
+    case 0:*dest=cpu.CR0;break;
+    case 3:*dest=cpu.CR3;break;
+    default:assert(0);
+  }
+}
+
+// Íù¼Ä´æÆ÷ÖĞĞ´ÄÚÈİ
+static inline void rtl_store_cr(int r,const rtlreg_t* src){
+  switch (r){
+    case 0:cpu.CR0=*src;break;
+    case 3:cpu.CR3=*src;break;
+    default:assert(0);
+  }
 }
 
 #endif

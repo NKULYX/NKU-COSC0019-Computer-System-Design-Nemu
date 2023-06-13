@@ -2,7 +2,6 @@
 #define __REG_H__
 
 #include "common.h"
-#include "memory/mmu.h"
 
 enum { R_EAX, R_ECX, R_EDX, R_EBX, R_ESP, R_EBP, R_ESI, R_EDI };
 enum { R_AX, R_CX, R_DX, R_BX, R_SP, R_BP, R_SI, R_DI };
@@ -17,58 +16,45 @@ enum { R_AL, R_CL, R_DL, R_BL, R_AH, R_CH, R_DH, R_BH };
 
 typedef struct {
   union {
-    union {
-      uint32_t _32;
-      uint16_t _16;
-      uint8_t _8[2];
-    } gpr[8];
+   union{
+    uint32_t _32;
+    uint16_t _16;
+    uint8_t _8[2];
+  } gpr[8];
 
-    /* Do NOT change the order of the GPRs' definitions. */
+  /* Do NOT change the order of the GPRs' definitions. */
 
-    /* In NEMU, rtlreg_t is exactly uint32_t. This makes RTL instructions
-     * in PA2 able to directly access these registers.
-     */
-    struct {
-      rtlreg_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
-    };
+  /* In NEMU, rtlreg_t is exactly uint32_t. This makes RTL instructions
+   * in PA2 able to directly access these registers.
+   */
+ struct{
+  rtlreg_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
   };
-
+ };
   vaddr_t eip;
-
-  // eflags register
-  // (only CF, ZF, SF, IF and OF are available)
-  union {
-    struct {
-      uint32_t CF: 1; // bit 0
-      uint32_t   : 5;
-      uint32_t ZF: 1; // bit 6
-      uint32_t SF: 1; // bit 7
-      uint32_t   : 1;
-      uint32_t IF: 1; // bit 9
-      uint32_t   : 1;
-      uint32_t OF: 1; // bit 11
-      uint32_t   : 20;
+  union{
+    struct{
+      uint32_t CF : 1;  // 进/借位置1
+      uint32_t    : 1;
+      uint32_t    : 4;
+      uint32_t ZF : 1;  // 运算结果为0置1
+      uint32_t SF : 1;  // 运算结果为负置1
+      uint32_t    : 1;
+      uint32_t IF : 1;  // 置1时允许响应中断请求
+      uint32_t    : 1;
+      uint32_t OF : 1;  // 运算结果溢出置1
+      uint32_t    : 20;
     };
     uint32_t val;
-  } eflags;
-
-  // IDT base & limit
-  struct {
+  }eflags;
+  struct{
     uint32_t base;
     uint16_t limit;
-  } idtr;
-
-  // cs register
-  // (not used in NEMU, just for differential testing)
-  uint16_t cs;
-
-  // control registers
-  CR0 cr0;
-  CR3 cr3;
-
-  // interrupt signal
+  }idtr;
+  uint32_t cs;
+  uint32_t CR0;
+  uint32_t CR3;
   bool INTR;
-
 } CPU_state;
 
 extern CPU_state cpu;

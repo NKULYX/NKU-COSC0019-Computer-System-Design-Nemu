@@ -85,7 +85,6 @@ void _ioe_init();
 unsigned long _uptime();
 int _read_key();
 void _draw_rect(const uint32_t *pixels, int x, int y, int w, int h);
-uint32_t *_get_fb();
 void _draw_sync();
 extern _Screen _screen;
 
