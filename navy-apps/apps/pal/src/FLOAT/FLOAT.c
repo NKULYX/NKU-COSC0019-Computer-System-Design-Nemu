@@ -2,14 +2,36 @@
 #include <stdint.h>
 #include <assert.h>
 
+typedef union {
+  struct {
+    uint32_t m : 23;
+    uint32_t e : 8;
+    uint32_t s : 1;
+  };
+  uint32_t val;
+} Float;
+
+#define __sign(x) ((x) & 0x80000000)
+#define __scale(x) (__sign(x) ? -(x) : (x))
+
 FLOAT F_mul_F(FLOAT a, FLOAT b) {
-  assert(0);
-  return 0;
+  int64_t scale = ((int64_t)a * (int64_t)b) >> 16;
+  return scale;
 }
 
 FLOAT F_div_F(FLOAT a, FLOAT b) {
-  assert(0);
-  return 0;
+  int64_t x = __scale(a) * 65536ll;
+  int64_t y = __scale(b);
+  int64_t ans = 0;
+  for(int i = 31; i >= 0; i--) {
+    int64_t t = y * (1ll << i);
+    if(t <= x) {
+      x -= t;
+      ans += (1ll << i);
+    }
+  }
+  ans *= ((__sign(a) ^ __sign(b)) ? -1 : 1);
+  return ans;
 }
 
 FLOAT f2F(float a) {
@@ -23,13 +45,22 @@ FLOAT f2F(float a) {
    * performing arithmetic operations on it directly?
    */
 
-  assert(0);
-  return 0;
+  Float f;
+  void * tmp = &a;
+  f.val = *(uint32_t *) tmp;
+  uint32_t m = f.m | (1 << 23);
+  int shift = 134 - (int) f.e;
+  if ( shift < 0 ) {
+    m <<= (-shift);
+  } 
+  else {
+    m >>= shift;
+  }
+  return (__sign(f.val) ? -m : m);
 }
 
 FLOAT Fabs(FLOAT a) {
-  assert(0);
-  return 0;
+  return __scale(a);
 }
 
 /* Functions below are already implemented */
