@@ -1,6 +1,6 @@
 #include "cpu/exec.h"
 
-make_EHelper(test) {  // Ö´ÐÐ°´Î»Óë£¬²¢½«±êÖ¾¼Ä´æÆ÷ÖÃÎ»£¨²»Ð´Èë£©
+make_EHelper(test) {  // Ö´ï¿½Ð°ï¿½Î»ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ë£©
   rtl_and(&t0,&id_dest->val,&id_src->val);
   t1=0;
   rtl_set_CF(&t1);
@@ -10,7 +10,7 @@ make_EHelper(test) {  // Ö´ÐÐ°´Î»Óë£¬²¢½«±êÖ¾¼Ä´æÆ÷ÖÃÎ»£¨²»Ð´Èë£©
   print_asm_template2(test);
 }
 
-make_EHelper(and) {  // Ö´ÐÐ°´Î»Óë£¬²¢½«±êÖ¾¼Ä´æÆ÷ÖÃÎ»£¨Ð´Èë£©
+make_EHelper(and) {  // Ö´ï¿½Ð°ï¿½Î»ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Ð´ï¿½ë£©
   rtl_and(&t0,&id_dest->val,&id_src->val);
   operand_write(id_dest,&t0);
   t1=0;
@@ -26,14 +26,14 @@ make_EHelper(xor) {
   operand_write(id_dest,&t0);
   rtl_update_ZFSF(&t0,id_dest->width);
   
-  t1=0;  // CFºÍOF¶¼ÖÃ³É0
+  t1=0;  // CFï¿½ï¿½OFï¿½ï¿½ï¿½Ã³ï¿½0
   rtl_set_CF(&t1);  
   rtl_set_OF(&t1);
 
   print_asm_template2(xor);
 }
 
-make_EHelper(or) {  // Ö´ÐÐ°´Î»»ò£¬²¢½«±êÖ¾¼Ä´æÆ÷ÖÃÎ»£¨Ð´Èë£©
+make_EHelper(or) {  // Ö´ï¿½Ð°ï¿½Î»ï¿½ò£¬²ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Ð´ï¿½ë£©
   rtl_or(&t0,&id_dest->val,&id_src->val);
   operand_write(id_dest,&t0);
   t1=0;
@@ -44,7 +44,7 @@ make_EHelper(or) {  // Ö´ÐÐ°´Î»»ò£¬²¢½«±êÖ¾¼Ä´æÆ÷ÖÃÎ»£¨Ð´Èë£©
   print_asm_template2(or);
 }
 
-make_EHelper(sar) {  // ËãÊõÓÒÒÆ
+make_EHelper(sar) {  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   
   // unnecessary to update CF and OF in NEMU
   rtl_sext(&t1, &id_dest->val, id_dest->width);
@@ -55,7 +55,7 @@ make_EHelper(sar) {  // ËãÊõÓÒÒÆ
   print_asm_template2(sar);
 }
 
-make_EHelper(shl) {  // Âß¼­×óÒÆ
+make_EHelper(shl) {  // ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½
   rtl_shl(&t1, &id_dest->val, &id_src->val);
   operand_write(id_dest, &t1);
 
@@ -65,7 +65,7 @@ make_EHelper(shl) {  // Âß¼­×óÒÆ
   print_asm_template2(shl);
 }
 
-make_EHelper(shr) {  // Âß¼­ÓÒÒÆ
+make_EHelper(shr) {  // ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½
   rtl_shr(&t1, &id_dest->val, &id_src->val);
   operand_write(id_dest, &t1);
 
@@ -83,8 +83,32 @@ make_EHelper(setcc) {
   print_asm("set%s %s", get_cc_name(subcode), id_dest->str);
 }
 
-make_EHelper(not) {  // ·Ç
+make_EHelper(not) {  // ï¿½ï¿½
   rtl_not(&id_dest->val);
   operand_write(id_dest,&id_dest->val);
   print_asm_template1(not);
+}
+
+make_EHelper(shld) {
+  rtl_shl(&t0, &id_dest->val, &id_src->val);
+  rtl_li(&t2, id_src2->width);
+  rtl_shli(&t2, &t2, 3);
+  rtl_subi(&t2, &t2, id_src->val);
+  rtl_shr(&t2, &id_src2->val, &t2);
+  rtl_or(&t0, &t0, &t2);
+  operand_write(id_dest, &t0);
+  rtl_update_ZFSF(&t0, id_dest->width);
+  print_asm_template3(shld);
+}
+
+make_EHelper(shrl) {
+  rtl_shr(&t0, &id_dest->val, &id_src->val);
+  rtl_li(&t2, id_src2->width);
+  rtl_shli(&t2, &t2, 3);
+  rtl_subi(&t2, &t2, id_src->val);
+  rtl_shl(&t2, &id_src2->val, &t2);
+  rtl_or(&t0, &t0, &t2);
+  operand_write(id_dest, &t0);
+  rtl_update_ZFSF(&t0, id_dest->width);
+  print_asm_template3(shrd);
 }

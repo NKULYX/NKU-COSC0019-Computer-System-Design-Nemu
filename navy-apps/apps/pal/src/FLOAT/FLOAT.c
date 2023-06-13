@@ -20,7 +20,7 @@ FLOAT F_mul_F(FLOAT a, FLOAT b) {
 }
 
 FLOAT F_div_F(FLOAT a, FLOAT b) {
-  int64_t x = __scale(a) * 65536ll;
+  int64_t x = __scale(a) << 16;
   int64_t y = __scale(b);
   int64_t ans = 0;
   for(int i = 31; i >= 0; i--) {
