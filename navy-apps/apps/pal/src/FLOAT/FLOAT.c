@@ -12,8 +12,6 @@
   };
 
 FLOAT F_mul_F(FLOAT a, FLOAT b) {
-  //assert(0);
-  //return 0;
   return ((int64_t)a * (int64_t)b) >> 16;
 }
 
